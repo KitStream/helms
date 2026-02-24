@@ -1,6 +1,7 @@
 {{/*
 Helm test pod — verifies that the server and dashboard services are
-reachable from within the cluster. Runs on `helm test <release>`.
+reachable from within the cluster and that the server API responds
+correctly. Runs on `helm test <release>`.
 */}}
 apiVersion: v1
 kind: Pod
@@ -15,18 +16,45 @@ metadata:
 spec:
   restartPolicy: Never
   containers:
-    - name: test-server
+    - name: test
       image: busybox:1.37
       command: ['sh', '-c']
       args:
         - |
-          echo "Testing server service..."
-          wget -qO- --timeout=5 http://{{ include "netbird.server.fullname" . }}:{{ .Values.server.service.port }}/ || true
-          echo "Server service is reachable."
+          set -e
+          FAIL=0
 
-          echo "Testing dashboard service..."
-          wget -qO- --timeout=5 http://{{ include "netbird.dashboard.fullname" . }}:{{ .Values.dashboard.service.port }}/ || true
-          echo "Dashboard service is reachable."
+          echo "==> Testing server /api/instance endpoint..."
+          RESPONSE=$(wget -qO- --timeout=10 http://{{ include "netbird.server.fullname" . }}:{{ .Values.server.service.port }}/api/instance 2>&1) || {
+            echo "FAIL: could not reach server /api/instance"
+            FAIL=1
+          }
+          if [ "$FAIL" -eq 0 ]; then
+            echo "Response: $RESPONSE"
+            case "$RESPONSE" in
+              *setup_required*)
+                echo "PASS: server API returned setup_required (fresh instance confirmed)"
+                ;;
+              *)
+                echo "FAIL: unexpected response from /api/instance: $RESPONSE"
+                FAIL=1
+                ;;
+            esac
+          fi
 
-          echo "All connectivity tests passed."
+          echo ""
+          echo "==> Testing dashboard service..."
+          wget -qO- --timeout=10 http://{{ include "netbird.dashboard.fullname" . }}:{{ .Values.dashboard.service.port }}/ > /dev/null 2>&1 || {
+            echo "FAIL: could not reach dashboard service"
+            FAIL=1
+          }
+          if [ "$FAIL" -eq 0 ]; then
+            echo "PASS: dashboard service is reachable"
+          fi
 
+          echo ""
+          if [ "$FAIL" -ne 0 ]; then
+            echo "Some tests FAILED"
+            exit 1
+          fi
+          echo "All tests PASSED"

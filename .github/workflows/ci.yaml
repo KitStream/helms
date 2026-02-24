@@ -27,7 +27,7 @@ jobs:
           done
 
       - name: Install helm-unittest plugin
-        run: helm plugin install https://github.com/helm-unittest/helm-unittest.git
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest.git --verify=false
 
       - name: Run unit tests
         run: |
@@ -38,8 +38,8 @@ jobs:
             fi
           done
 
-  e2e-test:
-    name: E2E Test (kind)
+  e2e-sqlite:
+    name: E2E — SQLite
     runs-on: ubuntu-latest
     needs: lint-and-unit-test
     steps:
@@ -56,31 +56,14 @@ jobs:
         with:
           cluster_name: helms-e2e
 
-      - name: Install netbird chart
-        run: |
-          helm install netbird-e2e charts/netbird \
-            -n netbird-e2e --create-namespace \
-            -f charts/netbird/ci/e2e-values.yaml \
-            --wait --timeout 3m
+      - name: Run e2e test (sqlite)
+        run: ci/scripts/e2e.sh sqlite
 
-      - name: Verify deployments are ready
-        run: |
-          kubectl -n netbird-e2e rollout status deployment/netbird-e2e-server --timeout=120s
-          kubectl -n netbird-e2e rollout status deployment/netbird-e2e-dashboard --timeout=120s
-
-      - name: Show pod status
-        if: always()
-        run: |
-          kubectl -n netbird-e2e get pods -o wide
-          echo "---"
-          kubectl -n netbird-e2e get svc
-
-      - name: Run helm test
-        run: helm test netbird-e2e -n netbird-e2e --timeout 2m
-
-      - name: Show logs on failure
+      - name: Show debug info on failure
         if: failure()
         run: |
+          echo "=== Pod status ==="
+          kubectl -n netbird-e2e get pods -o wide || true
           echo "=== Server logs ==="
           kubectl -n netbird-e2e logs deployment/netbird-e2e-server --all-containers --tail=100 || true
           echo "=== Dashboard logs ==="
@@ -88,9 +71,72 @@ jobs:
           echo "=== Events ==="
           kubectl -n netbird-e2e get events --sort-by='.lastTimestamp' || true
 
-      - name: Cleanup
-        if: always()
-        run: |
-          helm uninstall netbird-e2e -n netbird-e2e --ignore-not-found || true
-          kubectl delete namespace netbird-e2e --ignore-not-found || true
+  e2e-postgres:
+    name: E2E — PostgreSQL
+    runs-on: ubuntu-latest
+    needs: lint-and-unit-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.0
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: helms-e2e
+
+      - name: Run e2e test (postgres)
+        run: ci/scripts/e2e.sh postgres
+
+      - name: Show debug info on failure
+        if: failure()
+        run: |
+          echo "=== Pod status ==="
+          kubectl -n netbird-e2e get pods -o wide || true
+          echo "=== Server logs ==="
+          kubectl -n netbird-e2e logs deployment/netbird-e2e-server --all-containers --tail=100 || true
+          echo "=== Dashboard logs ==="
+          kubectl -n netbird-e2e logs deployment/netbird-e2e-dashboard --tail=100 || true
+          echo "=== PostgreSQL logs ==="
+          kubectl -n netbird-e2e logs deployment/postgres --tail=50 || true
+          echo "=== Events ==="
+          kubectl -n netbird-e2e get events --sort-by='.lastTimestamp' || true
+
+  e2e-mysql:
+    name: E2E — MySQL
+    runs-on: ubuntu-latest
+    needs: lint-and-unit-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.0
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: helms-e2e
+
+      - name: Run e2e test (mysql)
+        run: ci/scripts/e2e.sh mysql
+
+      - name: Show debug info on failure
+        if: failure()
+        run: |
+          echo "=== Pod status ==="
+          kubectl -n netbird-e2e get pods -o wide || true
+          echo "=== Server logs ==="
+          kubectl -n netbird-e2e logs deployment/netbird-e2e-server --all-containers --tail=100 || true
+          echo "=== Dashboard logs ==="
+          kubectl -n netbird-e2e logs deployment/netbird-e2e-dashboard --tail=100 || true
+          echo "=== MySQL logs ==="
+          kubectl -n netbird-e2e logs deployment/mysql --tail=50 || true
+          echo "=== Events ==="
+          kubectl -n netbird-e2e get events --sort-by='.lastTimestamp' || true
