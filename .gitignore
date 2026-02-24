@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# Helm
+*.tgz
+charts/*/charts/*.tgz
+
