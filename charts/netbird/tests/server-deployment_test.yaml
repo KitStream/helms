@@ -135,22 +135,26 @@ tests:
             name: data
             emptyDir: {}
 
-  - it: should use auto-generated secret by default
+  - it: should inject auto-generated secrets via env vars by default
     asserts:
       - contains:
-          path: spec.template.spec.volumes
+          path: spec.template.spec.initContainers[0].env
           content:
-            name: secret-auth
-            secret:
-              secretName: RELEASE-NAME-netbird-server-generated
+            name: AUTH_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-netbird-server-generated
+                key: authSecret
       - contains:
-          path: spec.template.spec.volumes
+          path: spec.template.spec.initContainers[0].env
           content:
-            name: secret-encryption-key
-            secret:
-              secretName: RELEASE-NAME-netbird-server-generated
+            name: ENCRYPTION_KEY
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-netbird-server-generated
+                key: encryptionKey
 
-  - it: should use external secret when secretName is set
+  - it: should inject external secrets via env vars when secretName is set
     set:
       server.secrets.authSecret.secretName: my-external-secret
       server.secrets.authSecret.autoGenerate: false
@@ -158,36 +162,42 @@ tests:
       server.secrets.storeEncryptionKey.autoGenerate: false
     asserts:
       - contains:
-          path: spec.template.spec.volumes
+          path: spec.template.spec.initContainers[0].env
           content:
-            name: secret-auth
-            secret:
-              secretName: my-external-secret
+            name: AUTH_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: my-external-secret
+                key: authSecret
       - contains:
-          path: spec.template.spec.volumes
+          path: spec.template.spec.initContainers[0].env
           content:
-            name: secret-encryption-key
-            secret:
-              secretName: my-enc-secret
+            name: ENCRYPTION_KEY
+            valueFrom:
+              secretKeyRef:
+                name: my-enc-secret
+                key: encryptionKey
 
-  - it: should mount DSN secret for postgres engine
+  - it: should inject DSN secret via env var for postgres engine
     set:
       server.config.store.engine: postgres
       server.secrets.storeDsn.secretName: my-db-secret
     asserts:
       - contains:
-          path: spec.template.spec.volumes
+          path: spec.template.spec.initContainers[0].env
           content:
-            name: secret-store-dsn
-            secret:
-              secretName: my-db-secret
+            name: STORE_DSN
+            valueFrom:
+              secretKeyRef:
+                name: my-db-secret
+                key: dsn
 
-  - it: should not mount DSN secret for sqlite engine
+  - it: should not inject DSN env var for sqlite engine
     asserts:
       - notContains:
-          path: spec.template.spec.volumes
+          path: spec.template.spec.initContainers[0].env
           content:
-            name: secret-store-dsn
+            name: STORE_DSN
           any: true
 
   - it: should set resource limits when specified
@@ -258,12 +268,12 @@ tests:
           value:
             readOnlyRootFilesystem: true
 
-  - it: should use init container with alpine image
+  - it: should use init container with initium image
     asserts:
       - equal:
           path: spec.template.spec.initContainers[0].name
           value: config-init
       - equal:
           path: spec.template.spec.initContainers[0].image
-          value: "alpine:3.21"
+          value: "ghcr.io/kitstream/initium:0.1.2"
 

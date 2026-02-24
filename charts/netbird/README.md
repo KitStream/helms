@@ -11,7 +11,7 @@ This chart deploys the NetBird self-hosted stack as two components:
 | **Server** | Combined binary running Management API, Signal, Relay, and STUN services on a single HTTP port |
 | **Dashboard** | Web UI for managing peers, groups, routes, and access policies |
 
-The server uses a single `config.yaml` that is rendered from a ConfigMap template with sensitive values injected at pod startup from Kubernetes Secrets via `envsubst`.
+The server uses a single `config.yaml` that is rendered from a ConfigMap template with sensitive values injected at pod startup from Kubernetes Secrets via [Initium](https://github.com/KitStream/initium)'s `render` subcommand (envsubst mode).
 
 ## Prerequisites
 
@@ -120,8 +120,8 @@ dashboard:
 | `server.image.repository` | string | `"netbirdio/netbird-server"` | Server image repository |
 | `server.image.tag` | string | `""` (appVersion) | Server image tag |
 | `server.image.pullPolicy` | string | `"IfNotPresent"` | Image pull policy |
-| `server.initImage.repository` | string | `"alpine"` | Init container image |
-| `server.initImage.tag` | string | `"3.21"` | Init container image tag |
+| `server.initImage.repository` | string | `"ghcr.io/kitstream/initium"` | Init container image ([Initium](https://github.com/KitStream/initium)) |
+| `server.initImage.tag` | string | `"0.1.2"` | Init container image tag |
 | `server.imagePullSecrets` | list | `[]` | Component-level pull secrets |
 
 #### Server Configuration

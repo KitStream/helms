@@ -1,4 +1,4 @@
-apiVersion: apps/v1
+﻿apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "netbird.server.fullname" . }}
@@ -42,46 +42,57 @@ spec:
       initContainers:
         - name: config-init
           image: "{{ .Values.server.initImage.repository }}:{{ .Values.server.initImage.tag }}"
-          command: ["sh", "-c"]
           args:
-            - |
-              apk add --no-cache gettext-envsubst > /dev/null 2>&1
-              export DOLLAR='$'
-              {{- if $authSecretName }}
-              export AUTH_SECRET=$(cat /secrets/auth-secret/{{ .Values.server.secrets.authSecret.secretKey }})
-              {{- else }}
-              export AUTH_SECRET=""
-              {{- end }}
-              {{- if $encKeySecretName }}
-              export ENCRYPTION_KEY=$(cat /secrets/encryption-key/{{ .Values.server.secrets.storeEncryptionKey.secretKey }})
-              {{- else }}
-              export ENCRYPTION_KEY=""
-              {{- end }}
-              {{- if $dsnSecretName }}
-              export STORE_DSN=$(cat /secrets/store-dsn/{{ .Values.server.secrets.storeDsn.secretKey }})
-              {{- end }}
-              envsubst < /tpl/config.yaml.tpl > /out/config.yaml
+            - render
+            - --template
+            - /tpl/config.yaml.tpl
+            - --output
+            - config.yaml
+            - --workdir
+            - /out
+          env:
+            - name: DOLLAR
+              value: "$"
+            {{- if $authSecretName }}
+            - name: AUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $authSecretName }}
+                  key: {{ .Values.server.secrets.authSecret.secretKey }}
+            {{- else }}
+            - name: AUTH_SECRET
+              value: ""
+            {{- end }}
+            {{- if $encKeySecretName }}
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $encKeySecretName }}
+                  key: {{ .Values.server.secrets.storeEncryptionKey.secretKey }}
+            {{- else }}
+            - name: ENCRYPTION_KEY
+              value: ""
+            {{- end }}
+            {{- if $dsnSecretName }}
+            - name: STORE_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $dsnSecretName }}
+                  key: {{ .Values.server.secrets.storeDsn.secretKey }}
+            {{- end }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
           volumeMounts:
             - name: config-tpl
               mountPath: /tpl
               readOnly: true
             - name: config-generated
               mountPath: /out
-            {{- if $authSecretName }}
-            - name: secret-auth
-              mountPath: /secrets/auth-secret
-              readOnly: true
-            {{- end }}
-            {{- if $encKeySecretName }}
-            - name: secret-encryption-key
-              mountPath: /secrets/encryption-key
-              readOnly: true
-            {{- end }}
-            {{- if $dsnSecretName }}
-            - name: secret-store-dsn
-              mountPath: /secrets/store-dsn
-              readOnly: true
-            {{- end }}
       containers:
         - name: server
           image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag | default .Chart.AppVersion }}"
@@ -131,21 +142,6 @@ spec:
             name: {{ include "netbird.server.fullname" . }}
         - name: config-generated
           emptyDir: {}
-        {{- if $authSecretName }}
-        - name: secret-auth
-          secret:
-            secretName: {{ $authSecretName }}
-        {{- end }}
-        {{- if $encKeySecretName }}
-        - name: secret-encryption-key
-          secret:
-            secretName: {{ $encKeySecretName }}
-        {{- end }}
-        {{- if $dsnSecretName }}
-        - name: secret-store-dsn
-          secret:
-            secretName: {{ $dsnSecretName }}
-        {{- end }}
         - name: data
           {{- if .Values.server.persistentVolume.enabled }}
           persistentVolumeClaim:

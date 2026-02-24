@@ -53,15 +53,14 @@ server:
   # is exported as a literal "$" by the init script), so envsubst will
   # never accidentally interpret user data as a variable reference.
   #
-  # If you prefer a pre-baked image, set repository/tag to any image that
-  # ships the `envsubst` binary (e.g. "dibi/envsubst:latest") and remove
-  # the `apk add` line from the deployment template.
+  # Initium (https://github.com/KitStream/initium) is used as the init
+  # container to render the config template with secret values injected
+  # from Kubernetes Secrets via the `render` subcommand (envsubst mode).
   initImage:
-    # -- Init container image repository. Must be Alpine-based or include
-    # the `envsubst` binary.
-    repository: alpine
+    # -- Init container image repository.
+    repository: ghcr.io/kitstream/initium
     # -- Init container image tag.
-    tag: "3.21"
+    tag: "0.1.2"
 
   # -- Component-level image pull secrets. Overrides the global imagePullSecrets
   # when set. Each entry is a map with a "name" key.
@@ -148,11 +147,12 @@ server:
   # exist in the same namespace as the release.
   #
   # Templating engine:
-  #   The ConfigMap stores a config.yaml.tpl template that uses GNU envsubst
-  #   ${VAR} syntax for secret placeholders. At pod startup an init container
-  #   reads secret values from mounted Kubernetes Secret volumes, exports
-  #   them as environment variables, and runs `envsubst` to produce the
-  #   final config.yaml. User-supplied values in server.config.* are escaped
+  #   The ConfigMap stores a config.yaml.tpl template that uses envsubst
+  #   ${VAR} syntax for secret placeholders. At pod startup the Initium
+  #   init container (https://github.com/KitStream/initium) reads secret
+  #   values from Kubernetes Secrets via secretKeyRef env vars and runs
+  #   its `render` subcommand (envsubst mode) to produce the final
+  #   config.yaml. User-supplied values in server.config.* are escaped
   #   at chart-render time so that any "$" in user input is preserved
   #   literally and cannot trigger unintended variable substitution.
   #

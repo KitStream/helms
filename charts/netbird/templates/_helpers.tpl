@@ -101,7 +101,8 @@ from a map of ENV_VAR: "secretName/secretKey"
 netbird.escapeEnvsubst — escapes a string so that envsubst will not
 interpret any ${...} or $VAR references inside user-supplied values.
 All "$" characters are replaced with the literal string "${DOLLAR}"
-and the init container pre-defines DOLLAR='$' before running envsubst.
+and the init container pre-defines DOLLAR='$' as an env var before
+Initium's render subcommand runs envsubst.
 */}}
 {{- define "netbird.escapeEnvsubst" -}}
 {{- . | replace "$" "${DOLLAR}" }}
@@ -131,8 +132,9 @@ Usage: include "netbird.server.resolveSecretName" (dict "ref" .Values.server.sec
 
 {{/*
 netbird.server.configTemplate — renders the config.yaml template with
-envsubst-style placeholders for sensitive values that the init container
-will substitute at runtime using GNU envsubst.
+envsubst-style placeholders for sensitive values that the Initium init
+container will substitute at runtime using its `render` subcommand
+(envsubst mode).
 
 Placeholders (envsubst variables):
   ${AUTH_SECRET}       <- server.secrets.authSecret
