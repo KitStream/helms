@@ -1,0 +1,50 @@
+# E2E test values — minimal config for deploying into a kind cluster.
+#
+# This configuration:
+# - Disables PVC (uses emptyDir) since kind has no default storage provisioner
+# - Disables all ingresses (no ingress controller in kind by default)
+# - Uses ClusterIP for the STUN service (LoadBalancer won't work in kind)
+# - Uses sqlite engine with auto-generated secrets
+# - Sets dummy auth values (server will start but auth won't be functional)
+
+server:
+  persistentVolume:
+    enabled: false
+
+  stunService:
+    type: ClusterIP
+
+  config:
+    exposedAddress: "https://netbird.localhost"
+    auth:
+      issuer: "https://auth.localhost"
+      dashboardRedirectURIs:
+        - "https://netbird.localhost/nb-auth"
+        - "https://netbird.localhost/nb-silent-auth"
+    store:
+      engine: sqlite
+
+  # Lower probe thresholds for faster feedback in CI
+  livenessProbe:
+    failureThreshold: 10
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    tcpSocket:
+      port: http
+  readinessProbe:
+    failureThreshold: 10
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    tcpSocket:
+      port: http
+
+dashboard:
+  config:
+    mgmtApiEndpoint: "https://netbird.localhost"
+    mgmtGrpcApiEndpoint: "https://netbird.localhost"
+    authAuthority: "https://auth.localhost"
+    authClientId: "test-client"
+    authAudience: "test-audience"
+

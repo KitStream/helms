@@ -1,0 +1,78 @@
+suite: dashboard ingress tests
+templates:
+  - templates/dashboard-ingress.yaml
+tests:
+  - it: should not render when disabled
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render when enabled
+    set:
+      dashboard.ingress.enabled: true
+      dashboard.ingress.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Ingress
+
+  - it: should set ingress class name
+    set:
+      dashboard.ingress.enabled: true
+      dashboard.ingress.className: nginx
+      dashboard.ingress.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /
+    asserts:
+      - equal:
+          path: spec.ingressClassName
+          value: nginx
+
+  - it: should use Prefix pathType by default
+    set:
+      dashboard.ingress.enabled: true
+      dashboard.ingress.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].pathType
+          value: Prefix
+
+  - it: should include dashboard labels
+    set:
+      dashboard.ingress.enabled: true
+      dashboard.ingress.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /
+    asserts:
+      - isSubset:
+          path: metadata.labels
+          content:
+            app.kubernetes.io/name: netbird
+            app.kubernetes.io/component: dashboard
+
+  - it: should set TLS
+    set:
+      dashboard.ingress.enabled: true
+      dashboard.ingress.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /
+      dashboard.ingress.tls:
+        - secretName: netbird-tls
+          hosts:
+            - netbird.example.com
+    asserts:
+      - equal:
+          path: spec.tls[0].secretName
+          value: netbird-tls
+

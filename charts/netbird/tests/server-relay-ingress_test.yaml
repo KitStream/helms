@@ -1,0 +1,72 @@
+suite: server relay ingress tests
+templates:
+  - templates/server-relay-ingress.yaml
+tests:
+  - it: should not render when disabled
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render when enabled
+    set:
+      server.ingressRelay.enabled: true
+      server.ingressRelay.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /relay
+              pathType: ImplementationSpecific
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Ingress
+
+  - it: should have -relay suffix in name
+    set:
+      server.ingressRelay.enabled: true
+      server.ingressRelay.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /relay
+    asserts:
+      - matchRegex:
+          path: metadata.name
+          pattern: '-relay$'
+
+  - it: should set host and paths
+    set:
+      server.ingressRelay.enabled: true
+      server.ingressRelay.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /relay
+              pathType: ImplementationSpecific
+            - path: /ws-proxy
+              pathType: ImplementationSpecific
+    asserts:
+      - equal:
+          path: spec.rules[0].host
+          value: netbird.example.com
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: /relay
+      - equal:
+          path: spec.rules[0].http.paths[1].path
+          value: /ws-proxy
+
+  - it: should set TLS
+    set:
+      server.ingressRelay.enabled: true
+      server.ingressRelay.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /relay
+      server.ingressRelay.tls:
+        - secretName: netbird-tls
+          hosts:
+            - netbird.example.com
+    asserts:
+      - equal:
+          path: spec.tls[0].secretName
+          value: netbird-tls
+

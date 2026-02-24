@@ -1,0 +1,70 @@
+suite: server gRPC ingress tests
+templates:
+  - templates/server-grpc-ingress.yaml
+tests:
+  - it: should not render when disabled
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render when enabled
+    set:
+      server.ingressGrpc.enabled: true
+      server.ingressGrpc.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /signalexchange.SignalExchange
+              pathType: ImplementationSpecific
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Ingress
+
+  - it: should include default gRPC annotations
+    set:
+      server.ingressGrpc.enabled: true
+      server.ingressGrpc.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /signalexchange.SignalExchange
+    asserts:
+      - isSubset:
+          path: metadata.annotations
+          content:
+            nginx.ingress.kubernetes.io/backend-protocol: GRPC
+            nginx.ingress.kubernetes.io/ssl-redirect: "true"
+            nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+            nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+
+  - it: should have -grpc suffix in name
+    set:
+      server.ingressGrpc.enabled: true
+      server.ingressGrpc.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /signalexchange.SignalExchange
+    asserts:
+      - matchRegex:
+          path: metadata.name
+          pattern: '-grpc$'
+
+  - it: should set TLS
+    set:
+      server.ingressGrpc.enabled: true
+      server.ingressGrpc.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /signalexchange.SignalExchange
+      server.ingressGrpc.tls:
+        - secretName: netbird-tls
+          hosts:
+            - netbird.example.com
+    asserts:
+      - equal:
+          path: spec.tls[0].secretName
+          value: netbird-tls
+
+
+
+

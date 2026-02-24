@@ -1,0 +1,56 @@
+suite: server stun service tests
+templates:
+  - templates/server-stun-service.yaml
+tests:
+  - it: should render a Service
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Service
+
+  - it: should use LoadBalancer type by default
+    asserts:
+      - equal:
+          path: spec.type
+          value: LoadBalancer
+
+  - it: should expose UDP stun port 3478
+    asserts:
+      - contains:
+          path: spec.ports
+          content:
+            name: stun
+            port: 3478
+            targetPort: stun
+            protocol: UDP
+
+  - it: should add annotations when specified
+    set:
+      server.stunService.annotations:
+        service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    asserts:
+      - isSubset:
+          path: metadata.annotations
+          content:
+            service.beta.kubernetes.io/aws-load-balancer-type: nlb
+
+  - it: should use custom service type
+    set:
+      server.stunService.type: NodePort
+    asserts:
+      - equal:
+          path: spec.type
+          value: NodePort
+
+  - it: should include selector labels
+    asserts:
+      - isSubset:
+          path: spec.selector
+          content:
+            app.kubernetes.io/name: netbird
+            app.kubernetes.io/component: server
+
+
+
+

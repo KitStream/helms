@@ -1,0 +1,75 @@
+suite: server configmap tests
+templates:
+  - templates/server-configmap.yaml
+tests:
+  - it: should render a ConfigMap
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ConfigMap
+
+  - it: should match default config snapshot
+    asserts:
+      - matchSnapshot:
+          path: data
+
+  - it: should render listen address from values
+    set:
+      server.config.listenAddress: ":8080"
+    asserts:
+      - matchSnapshot:
+          path: data
+
+  - it: should render exposed address from values
+    set:
+      server.config.exposedAddress: "https://netbird.example.com"
+    asserts:
+      - matchSnapshot:
+          path: data
+
+  - it: should render auth issuer from values
+    set:
+      server.config.auth.issuer: "https://auth.example.com"
+    asserts:
+      - matchSnapshot:
+          path: data
+
+  - it: should render sqlite engine with empty DSN
+    set:
+      server.config.store.engine: sqlite
+    asserts:
+      - matchSnapshot:
+          path: data
+
+  - it: should render postgres engine with DSN placeholder
+    set:
+      server.config.store.engine: postgres
+    asserts:
+      - matchSnapshot:
+          path: data
+
+  - it: should render dashboard redirect URIs
+    set:
+      server.config.auth.dashboardRedirectURIs:
+        - "https://netbird.example.com/nb-auth"
+        - "https://netbird.example.com/nb-silent-auth"
+    asserts:
+      - matchSnapshot:
+          path: data
+
+  - it: should escape dollar signs in user-supplied values
+    set:
+      server.config.listenAddress: ":80$test"
+    asserts:
+      - matchSnapshot:
+          path: data
+
+  - it: should include common labels
+    asserts:
+      - isSubset:
+          path: metadata.labels
+          content:
+            app.kubernetes.io/name: netbird
+            app.kubernetes.io/component: server
+

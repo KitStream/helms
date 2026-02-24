@@ -1,0 +1,191 @@
+suite: dashboard deployment tests
+templates:
+  - templates/dashboard-deployment.yaml
+tests:
+  - it: should render a Deployment
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Deployment
+
+  - it: should use the configured dashboard image
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "netbirdio/dashboard:v2.32.4"
+
+  - it: should set replica count
+    set:
+      dashboard.replicaCount: 2
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 2
+
+  - it: should include selector labels
+    asserts:
+      - isSubset:
+          path: spec.selector.matchLabels
+          content:
+            app.kubernetes.io/name: netbird
+            app.kubernetes.io/component: dashboard
+
+  - it: should set management API endpoint env var
+    set:
+      dashboard.config.mgmtApiEndpoint: "https://netbird.example.com"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NETBIRD_MGMT_API_ENDPOINT
+            value: "https://netbird.example.com"
+
+  - it: should set management gRPC endpoint env var
+    set:
+      dashboard.config.mgmtGrpcApiEndpoint: "https://netbird.example.com"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NETBIRD_MGMT_GRPC_API_ENDPOINT
+            value: "https://netbird.example.com"
+
+  - it: should set auth env vars
+    set:
+      dashboard.config.authAudience: "my-audience"
+      dashboard.config.authClientId: "my-client"
+      dashboard.config.authAuthority: "https://auth.example.com"
+      dashboard.config.useAuth0: "true"
+      dashboard.config.authSupportedScopes: "openid profile"
+      dashboard.config.authRedirectUri: "/callback"
+      dashboard.config.authSilentRedirectUri: "/silent"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: AUTH_AUDIENCE
+            value: "my-audience"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: AUTH_CLIENT_ID
+            value: "my-client"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: AUTH_AUTHORITY
+            value: "https://auth.example.com"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: USE_AUTH0
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: AUTH_SUPPORTED_SCOPES
+            value: "openid profile"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: AUTH_REDIRECT_URI
+            value: "/callback"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: AUTH_SILENT_REDIRECT_URI
+            value: "/silent"
+
+  - it: should use plain-text client secret by default
+    set:
+      dashboard.secrets.authClientSecret.value: ""
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: AUTH_CLIENT_SECRET
+            value: ""
+
+  - it: should use secretKeyRef when secretName is set
+    set:
+      dashboard.secrets.authClientSecret.secretName: my-oidc-secret
+      dashboard.secrets.authClientSecret.secretKey: clientSecret
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: AUTH_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: my-oidc-secret
+                key: clientSecret
+
+  - it: should include extra env vars
+    set:
+      dashboard.extraEnv:
+        - name: MY_CUSTOM_VAR
+          value: "my-value"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: MY_CUSTOM_VAR
+            value: "my-value"
+
+  - it: should set NGINX_SSL_PORT and LETSENCRYPT_DOMAIN
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NGINX_SSL_PORT
+            value: "443"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: LETSENCRYPT_DOMAIN
+            value: "none"
+
+  - it: should set resource limits when specified
+    set:
+      dashboard.resources:
+        limits:
+          cpu: 200m
+          memory: 256Mi
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+
+  - it: should set node selector
+    set:
+      dashboard.nodeSelector:
+        tier: frontend
+    asserts:
+      - equal:
+          path: spec.template.spec.nodeSelector
+          value:
+            tier: frontend
+
+  - it: should add pod annotations
+    set:
+      dashboard.podAnnotations:
+        sidecar.istio.io/inject: "false"
+    asserts:
+      - isSubset:
+          path: spec.template.metadata.annotations
+          content:
+            sidecar.istio.io/inject: "false"
+
+  - it: should include liveness and readiness probes by default
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /
+

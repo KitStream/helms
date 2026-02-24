@@ -1,0 +1,269 @@
+suite: server deployment tests
+templates:
+  - templates/server-deployment.yaml
+tests:
+  - it: should render a Deployment
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Deployment
+
+  - it: should use default image from appVersion
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "netbirdio/netbird-server:0.65.3"
+
+  - it: should use custom image tag when set
+    set:
+      server.image.tag: "1.0.0"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "netbirdio/netbird-server:1.0.0"
+
+  - it: should set replica count
+    set:
+      server.replicaCount: 3
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 3
+
+  - it: should include selector labels
+    asserts:
+      - isSubset:
+          path: spec.selector.matchLabels
+          content:
+            app.kubernetes.io/name: netbird
+            app.kubernetes.io/component: server
+
+  - it: should include pod labels
+    asserts:
+      - isSubset:
+          path: spec.template.metadata.labels
+          content:
+            app.kubernetes.io/name: netbird
+            app.kubernetes.io/component: server
+
+  - it: should add custom pod annotations
+    set:
+      server.podAnnotations:
+        prometheus.io/scrape: "true"
+    asserts:
+      - isSubset:
+          path: spec.template.metadata.annotations
+          content:
+            prometheus.io/scrape: "true"
+
+  - it: should add custom pod labels
+    set:
+      server.podLabels:
+        custom-label: custom-value
+    asserts:
+      - isSubset:
+          path: spec.template.metadata.labels
+          content:
+            custom-label: custom-value
+
+  - it: should include config checksum annotation
+    asserts:
+      - exists:
+          path: spec.template.metadata.annotations.checksum/config
+
+  - it: should expose http, stun, metrics, and health ports
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: http
+            containerPort: 80
+            protocol: TCP
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: stun
+            containerPort: 3478
+            protocol: UDP
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: metrics
+            containerPort: 9090
+            protocol: TCP
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: health
+            containerPort: 9000
+            protocol: TCP
+
+  - it: should mount config and data volumes
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: config-generated
+            mountPath: /etc/netbird/config.yaml
+            subPath: config.yaml
+            readOnly: true
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: data
+            mountPath: /var/lib/netbird
+
+  - it: should use PVC when persistentVolume is enabled
+    set:
+      server.persistentVolume.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: data
+            persistentVolumeClaim:
+              claimName: RELEASE-NAME-netbird-server
+
+  - it: should use emptyDir when persistentVolume is disabled
+    set:
+      server.persistentVolume.enabled: false
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: data
+            emptyDir: {}
+
+  - it: should use auto-generated secret by default
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: secret-auth
+            secret:
+              secretName: RELEASE-NAME-netbird-server-generated
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: secret-encryption-key
+            secret:
+              secretName: RELEASE-NAME-netbird-server-generated
+
+  - it: should use external secret when secretName is set
+    set:
+      server.secrets.authSecret.secretName: my-external-secret
+      server.secrets.authSecret.autoGenerate: false
+      server.secrets.storeEncryptionKey.secretName: my-enc-secret
+      server.secrets.storeEncryptionKey.autoGenerate: false
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: secret-auth
+            secret:
+              secretName: my-external-secret
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: secret-encryption-key
+            secret:
+              secretName: my-enc-secret
+
+  - it: should mount DSN secret for postgres engine
+    set:
+      server.config.store.engine: postgres
+      server.secrets.storeDsn.secretName: my-db-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: secret-store-dsn
+            secret:
+              secretName: my-db-secret
+
+  - it: should not mount DSN secret for sqlite engine
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: secret-store-dsn
+          any: true
+
+  - it: should set resource limits when specified
+    set:
+      server.resources:
+        limits:
+          cpu: 500m
+          memory: 512Mi
+        requests:
+          cpu: 100m
+          memory: 128Mi
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+
+  - it: should set node selector
+    set:
+      server.nodeSelector:
+        disktype: ssd
+    asserts:
+      - equal:
+          path: spec.template.spec.nodeSelector
+          value:
+            disktype: ssd
+
+  - it: should set tolerations
+    set:
+      server.tolerations:
+        - key: "dedicated"
+          operator: "Equal"
+          value: "netbird"
+          effect: "NoSchedule"
+    asserts:
+      - contains:
+          path: spec.template.spec.tolerations
+          content:
+            key: "dedicated"
+            operator: "Equal"
+            value: "netbird"
+            effect: "NoSchedule"
+
+  - it: should set pod security context
+    set:
+      server.podSecurityContext:
+        runAsUser: 1000
+        fsGroup: 2000
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            runAsUser: 1000
+            fsGroup: 2000
+
+  - it: should set container security context
+    set:
+      server.securityContext:
+        readOnlyRootFilesystem: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            readOnlyRootFilesystem: true
+
+  - it: should use init container with alpine image
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: config-init
+      - equal:
+          path: spec.template.spec.initContainers[0].image
+          value: "alpine:3.21"
+
