@@ -65,8 +65,8 @@ jobs:
 
       - name: Verify deployments are ready
         run: |
-          kubectl -n netbird-e2e rollout status deployment/netbird-e2e-netbird-server --timeout=120s
-          kubectl -n netbird-e2e rollout status deployment/netbird-e2e-netbird-dashboard --timeout=120s
+          kubectl -n netbird-e2e rollout status deployment/netbird-e2e-server --timeout=120s
+          kubectl -n netbird-e2e rollout status deployment/netbird-e2e-dashboard --timeout=120s
 
       - name: Show pod status
         if: always()
@@ -82,9 +82,9 @@ jobs:
         if: failure()
         run: |
           echo "=== Server logs ==="
-          kubectl -n netbird-e2e logs deployment/netbird-e2e-netbird-server --all-containers --tail=100 || true
+          kubectl -n netbird-e2e logs deployment/netbird-e2e-server --all-containers --tail=100 || true
           echo "=== Dashboard logs ==="
-          kubectl -n netbird-e2e logs deployment/netbird-e2e-netbird-dashboard --tail=100 || true
+          kubectl -n netbird-e2e logs deployment/netbird-e2e-dashboard --tail=100 || true
           echo "=== Events ==="
           kubectl -n netbird-e2e get events --sort-by='.lastTimestamp' || true
 

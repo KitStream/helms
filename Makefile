@@ -34,8 +34,8 @@ e2e: e2e-setup
 		-f charts/netbird/ci/e2e-values.yaml \
 		--wait --timeout 3m
 	@echo "==> Verifying rollout..."
-	kubectl -n $(E2E_NS) rollout status deployment/netbird-e2e-netbird-server --timeout=120s
-	kubectl -n $(E2E_NS) rollout status deployment/netbird-e2e-netbird-dashboard --timeout=120s
+	kubectl -n $(E2E_NS) rollout status deployment/netbird-e2e-server --timeout=120s
+	kubectl -n $(E2E_NS) rollout status deployment/netbird-e2e-dashboard --timeout=120s
 	@echo "==> Running helm test..."
 	helm test netbird-e2e -n $(E2E_NS) --timeout 2m
 	@echo "==> E2E tests passed!"
