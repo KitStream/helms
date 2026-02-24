@@ -1,0 +1,305 @@
+# NetBird Helm Chart
+
+A Helm chart for deploying [NetBird](https://netbird.io) VPN management, signal, dashboard, and relay services on Kubernetes.
+
+## Overview
+
+This chart deploys the NetBird self-hosted stack as two components:
+
+| Component | Description |
+|-----------|-------------|
+| **Server** | Combined binary running Management API, Signal, Relay, and STUN services on a single HTTP port |
+| **Dashboard** | Web UI for managing peers, groups, routes, and access policies |
+
+The server uses a single `config.yaml` that is rendered from a ConfigMap template with sensitive values injected at pod startup from Kubernetes Secrets via `envsubst`.
+
+## Prerequisites
+
+- Kubernetes 1.24+
+- Helm 3.x
+- An OAuth2 / OIDC identity provider (Auth0, Keycloak, Authentik, Zitadel, etc.)
+- An Ingress controller (nginx recommended) with TLS termination
+
+## Installation
+
+```bash
+helm install netbird ./charts/netbird \
+  -n netbird --create-namespace \
+  -f my-values.yaml
+```
+
+## Minimal Configuration Example
+
+```yaml
+server:
+  config:
+    exposedAddress: "https://netbird.example.com"
+    auth:
+      issuer: "https://auth.example.com"
+      dashboardRedirectURIs:
+        - "https://netbird.example.com/nb-auth"
+        - "https://netbird.example.com/nb-silent-auth"
+  ingress:
+    enabled: true
+    hosts:
+      - host: netbird.example.com
+        paths:
+          - path: /api
+            pathType: ImplementationSpecific
+          - path: /oauth2
+            pathType: ImplementationSpecific
+    tls:
+      - secretName: netbird-tls
+        hosts:
+          - netbird.example.com
+  ingressGrpc:
+    enabled: true
+    hosts:
+      - host: netbird.example.com
+        paths:
+          - path: /signalexchange.SignalExchange
+            pathType: ImplementationSpecific
+          - path: /management.ManagementService
+            pathType: ImplementationSpecific
+    tls:
+      - secretName: netbird-tls
+        hosts:
+          - netbird.example.com
+  ingressRelay:
+    enabled: true
+    hosts:
+      - host: netbird.example.com
+        paths:
+          - path: /relay
+            pathType: ImplementationSpecific
+          - path: /ws-proxy
+            pathType: ImplementationSpecific
+    tls:
+      - secretName: netbird-tls
+        hosts:
+          - netbird.example.com
+
+dashboard:
+  config:
+    mgmtApiEndpoint: "https://netbird.example.com"
+    mgmtGrpcApiEndpoint: "https://netbird.example.com"
+    authAuthority: "https://auth.example.com"
+    authClientId: "netbird-dashboard"
+    authAudience: "netbird-dashboard"
+  ingress:
+    enabled: true
+    hosts:
+      - host: netbird.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: netbird-tls
+        hosts:
+          - netbird.example.com
+```
+
+## Values Reference
+
+### Global
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `nameOverride` | string | `""` | Override the chart name in resource names |
+| `fullnameOverride` | string | `""` | Fully override the resource name prefix |
+| `imagePullSecrets` | list | `[]` | Global image pull secrets for all pods |
+| `serviceAccount.create` | bool | `true` | Create a ServiceAccount |
+| `serviceAccount.annotations` | object | `{}` | ServiceAccount annotations |
+| `serviceAccount.name` | string | `""` | ServiceAccount name override |
+
+### Server
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `server.replicaCount` | int | `1` | Number of server pod replicas |
+| `server.image.repository` | string | `"netbirdio/netbird-server"` | Server image repository |
+| `server.image.tag` | string | `""` (appVersion) | Server image tag |
+| `server.image.pullPolicy` | string | `"IfNotPresent"` | Image pull policy |
+| `server.initImage.repository` | string | `"alpine"` | Init container image |
+| `server.initImage.tag` | string | `"3.21"` | Init container image tag |
+| `server.imagePullSecrets` | list | `[]` | Component-level pull secrets |
+
+#### Server Configuration
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `server.config.listenAddress` | string | `":80"` | Address and port the server listens on |
+| `server.config.exposedAddress` | string | `""` | Public URL for peer connections |
+| `server.config.stunPorts` | list | `[3478]` | UDP ports for the embedded STUN server |
+| `server.config.metricsPort` | int | `9090` | Prometheus metrics port |
+| `server.config.healthcheckAddress` | string | `":9000"` | Health check endpoint address |
+| `server.config.logLevel` | string | `"info"` | Log verbosity (debug, info, warn, error) |
+| `server.config.logFile` | string | `"console"` | Log output destination |
+| `server.config.dataDir` | string | `"/var/lib/netbird"` | Data directory for state and DB |
+| `server.config.auth.issuer` | string | `""` | OAuth2/OIDC issuer URL |
+| `server.config.auth.signKeyRefreshEnabled` | bool | `true` | Auto-refresh IdP signing keys |
+| `server.config.auth.dashboardRedirectURIs` | list | `[]` | Dashboard OAuth2 redirect URIs |
+| `server.config.auth.cliRedirectURIs` | list | `["http://localhost:53000/"]` | CLI redirect URIs |
+| `server.config.store.engine` | string | `"sqlite"` | Database engine (sqlite, postgres, mysql) |
+
+#### Server Secrets
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `server.secrets.authSecret.secretName` | string | `""` | Existing Secret name (empty = auto-generate) |
+| `server.secrets.authSecret.secretKey` | string | `"authSecret"` | Key in the Secret |
+| `server.secrets.authSecret.autoGenerate` | bool | `true` | Auto-generate on first install |
+| `server.secrets.storeEncryptionKey.secretName` | string | `""` | Existing Secret name (empty = auto-generate) |
+| `server.secrets.storeEncryptionKey.secretKey` | string | `"encryptionKey"` | Key in the Secret |
+| `server.secrets.storeEncryptionKey.autoGenerate` | bool | `true` | Auto-generate on first install |
+| `server.secrets.storeDsn.secretName` | string | `""` | Secret containing the database DSN |
+| `server.secrets.storeDsn.secretKey` | string | `"dsn"` | Key in the DSN Secret |
+
+#### Server Storage
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `server.persistentVolume.enabled` | bool | `true` | Create a PVC for server data |
+| `server.persistentVolume.storageClass` | string | `""` | Storage class (empty = cluster default) |
+| `server.persistentVolume.accessModes` | list | `["ReadWriteOnce"]` | PVC access modes |
+| `server.persistentVolume.size` | string | `"1Gi"` | PVC size |
+| `server.persistentVolume.annotations` | object | `{}` | PVC annotations |
+
+#### Server Networking
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `server.stunPort` | int | `3478` | STUN UDP container port |
+| `server.service.type` | string | `"ClusterIP"` | Server service type |
+| `server.service.port` | int | `80` | Server service port |
+| `server.stunService.type` | string | `"LoadBalancer"` | STUN service type |
+| `server.stunService.port` | int | `3478` | STUN service port |
+| `server.stunService.annotations` | object | `{}` | STUN service annotations |
+
+#### Server Ingress
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `server.ingress.enabled` | bool | `false` | Create HTTP ingress (API + OAuth2) |
+| `server.ingress.className` | string | `"nginx"` | Ingress class |
+| `server.ingress.annotations` | object | `{}` | Ingress annotations |
+| `server.ingress.hosts` | list | `[]` | Ingress host rules |
+| `server.ingress.tls` | list | `[]` | TLS configuration |
+| `server.ingressGrpc.enabled` | bool | `false` | Create gRPC ingress (Signal + Management) |
+| `server.ingressGrpc.className` | string | `"nginx"` | Ingress class |
+| `server.ingressGrpc.annotations` | object | see values.yaml | GRPC backend annotations |
+| `server.ingressGrpc.hosts` | list | `[]` | Ingress host rules |
+| `server.ingressGrpc.tls` | list | `[]` | TLS configuration |
+| `server.ingressRelay.enabled` | bool | `false` | Create relay/WebSocket ingress |
+| `server.ingressRelay.className` | string | `"nginx"` | Ingress class |
+| `server.ingressRelay.annotations` | object | `{}` | Ingress annotations |
+| `server.ingressRelay.hosts` | list | `[]` | Ingress host rules |
+| `server.ingressRelay.tls` | list | `[]` | TLS configuration |
+
+#### Server Pod
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `server.resources` | object | `{}` | CPU/memory requests and limits |
+| `server.nodeSelector` | object | `{}` | Node selector labels |
+| `server.tolerations` | list | `[]` | Pod tolerations |
+| `server.affinity` | object | `{}` | Pod affinity rules |
+| `server.podAnnotations` | object | `{}` | Pod annotations |
+| `server.podLabels` | object | `{}` | Additional pod labels |
+| `server.podSecurityContext` | object | `{}` | Pod security context |
+| `server.securityContext` | object | `{}` | Container security context |
+| `server.livenessProbe` | object | TCP check on `http` port | Liveness probe |
+| `server.readinessProbe` | object | TCP check on `http` port | Readiness probe |
+
+### Dashboard
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `dashboard.replicaCount` | int | `1` | Number of dashboard replicas |
+| `dashboard.image.repository` | string | `"netbirdio/dashboard"` | Dashboard image |
+| `dashboard.image.tag` | string | `"v2.32.4"` | Dashboard image tag |
+| `dashboard.image.pullPolicy` | string | `"IfNotPresent"` | Image pull policy |
+| `dashboard.imagePullSecrets` | list | `[]` | Component-level pull secrets |
+
+#### Dashboard Configuration
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `dashboard.config.mgmtApiEndpoint` | string | `""` | Management API URL |
+| `dashboard.config.mgmtGrpcApiEndpoint` | string | `""` | Management gRPC URL |
+| `dashboard.config.authAudience` | string | `"netbird-dashboard"` | OAuth2 audience |
+| `dashboard.config.authClientId` | string | `"netbird-dashboard"` | OAuth2 client ID |
+| `dashboard.config.authAuthority` | string | `""` | OAuth2 authority / issuer URL |
+| `dashboard.config.useAuth0` | string | `"false"` | Use Auth0 as IdP |
+| `dashboard.config.authSupportedScopes` | string | `"openid profile email groups"` | OAuth2 scopes |
+| `dashboard.config.authRedirectUri` | string | `"/nb-auth"` | Auth redirect path |
+| `dashboard.config.authSilentRedirectUri` | string | `"/nb-silent-auth"` | Silent auth redirect path |
+| `dashboard.config.nginxSslPort` | string | `"443"` | NGINX SSL port inside the container |
+| `dashboard.config.letsencryptDomain` | string | `"none"` | Let's Encrypt domain ("none" = external TLS) |
+
+#### Dashboard Secrets
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `dashboard.secrets.authClientSecret.value` | string | `""` | Plain-text client secret (when no Secret ref) |
+| `dashboard.secrets.authClientSecret.secretName` | string | `""` | Existing Secret name |
+| `dashboard.secrets.authClientSecret.secretKey` | string | `"clientSecret"` | Key in the Secret |
+
+#### Dashboard Extra
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `dashboard.extraEnv` | list | `[]` | Additional environment variables |
+
+#### Dashboard Networking
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `dashboard.service.type` | string | `"ClusterIP"` | Dashboard service type |
+| `dashboard.service.port` | int | `80` | Dashboard service port |
+| `dashboard.ingress.enabled` | bool | `false` | Create dashboard ingress |
+| `dashboard.ingress.className` | string | `"nginx"` | Ingress class |
+| `dashboard.ingress.annotations` | object | `{}` | Ingress annotations |
+| `dashboard.ingress.hosts` | list | `[]` | Ingress host rules |
+| `dashboard.ingress.tls` | list | `[]` | TLS configuration |
+
+#### Dashboard Pod
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `dashboard.resources` | object | `{}` | CPU/memory requests and limits |
+| `dashboard.nodeSelector` | object | `{}` | Node selector labels |
+| `dashboard.tolerations` | list | `[]` | Pod tolerations |
+| `dashboard.affinity` | object | `{}` | Pod affinity rules |
+| `dashboard.podAnnotations` | object | `{}` | Pod annotations |
+| `dashboard.podLabels` | object | `{}` | Additional pod labels |
+| `dashboard.podSecurityContext` | object | `{}` | Pod security context |
+| `dashboard.securityContext` | object | `{}` | Container security context |
+| `dashboard.livenessProbe` | object | HTTP GET `/` | Liveness probe |
+| `dashboard.readinessProbe` | object | HTTP GET `/` | Readiness probe |
+
+## Architecture
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                     Ingress Controller                   │
+│                                                          │
+│  /api, /oauth2 ──────────┐                               │
+│  /signalexchange/*, /management/* ──► Server Pod :80     │
+│  /relay, /ws-proxy ──────┘       (Management + Signal    │
+│                                   + Relay combined)      │
+│  / ──────────────────────────────► Dashboard Pod :80     │
+└──────────────────────────────────────────────────────────┘
+                                        │
+                               STUN Service :3478/UDP
+                               (LoadBalancer)
+```
+
+## Upstream Source
+
+This chart is based on the [NetBird](https://github.com/netbirdio/netbird) project. See the `sources` field in `Chart.yaml` for details.
+
+## License
+
+Apache License 2.0 — see [LICENSE](../../LICENSE).
+

@@ -1,0 +1,36 @@
+NetBird has been deployed successfully!
+
+Components:
+  Server (Management + Signal + Relay + STUN):
+    Service: {{ include "netbird.server.fullname" . }}:{{ .Values.server.service.port }}
+    STUN Service: {{ include "netbird.server.fullname" . }}-stun:{{ .Values.server.stunService.port }} ({{ .Values.server.stunService.type }})
+
+{{- if .Values.server.ingress.enabled }}
+  Server HTTP Ingress (API + OAuth2):
+  {{- range .Values.server.ingress.hosts }}
+    https://{{ .host }}{{ (index .paths 0).path }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.server.ingressGrpc.enabled }}
+  Server gRPC Ingress (Signal + Management):
+  {{- range .Values.server.ingressGrpc.hosts }}
+    https://{{ .host }}{{ (index .paths 0).path }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.server.ingressRelay.enabled }}
+  Server Relay Ingress:
+  {{- range .Values.server.ingressRelay.hosts }}
+    https://{{ .host }}{{ (index .paths 0).path }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.dashboard.ingress.enabled }}
+  Dashboard:
+  {{- range .Values.dashboard.ingress.hosts }}
+    https://{{ .host }}{{ (index .paths 0).path }}
+  {{- end }}
+{{- end }}
+
+  Database: {{ .Values.server.config.store.engine }}

@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "netbird.dashboard.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "netbird.dashboard.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.dashboard.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "netbird.dashboard.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.dashboard.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "netbird.dashboard.selectorLabels" . | nindent 8 }}
+        {{- with .Values.dashboard.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "netbird.serviceAccountName" . }}
+      {{- with (coalesce .Values.dashboard.imagePullSecrets .Values.imagePullSecrets) }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.dashboard.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: dashboard
+          image: "{{ .Values.dashboard.image.repository }}:{{ .Values.dashboard.image.tag }}"
+          imagePullPolicy: {{ .Values.dashboard.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          env:
+            - name: NETBIRD_MGMT_API_ENDPOINT
+              value: {{ .Values.dashboard.config.mgmtApiEndpoint | quote }}
+            - name: NETBIRD_MGMT_GRPC_API_ENDPOINT
+              value: {{ .Values.dashboard.config.mgmtGrpcApiEndpoint | quote }}
+            - name: AUTH_AUDIENCE
+              value: {{ .Values.dashboard.config.authAudience | quote }}
+            - name: AUTH_CLIENT_ID
+              value: {{ .Values.dashboard.config.authClientId | quote }}
+            {{- if .Values.dashboard.secrets.authClientSecret.secretName }}
+            - name: AUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.dashboard.secrets.authClientSecret.secretName }}
+                  key: {{ .Values.dashboard.secrets.authClientSecret.secretKey }}
+            {{- else }}
+            - name: AUTH_CLIENT_SECRET
+              value: {{ .Values.dashboard.secrets.authClientSecret.value | quote }}
+            {{- end }}
+            - name: AUTH_AUTHORITY
+              value: {{ .Values.dashboard.config.authAuthority | quote }}
+            - name: USE_AUTH0
+              value: {{ .Values.dashboard.config.useAuth0 | quote }}
+            - name: AUTH_SUPPORTED_SCOPES
+              value: {{ .Values.dashboard.config.authSupportedScopes | quote }}
+            - name: AUTH_REDIRECT_URI
+              value: {{ .Values.dashboard.config.authRedirectUri | quote }}
+            - name: AUTH_SILENT_REDIRECT_URI
+              value: {{ .Values.dashboard.config.authSilentRedirectUri | quote }}
+            - name: NGINX_SSL_PORT
+              value: {{ .Values.dashboard.config.nginxSslPort | quote }}
+            - name: LETSENCRYPT_DOMAIN
+              value: {{ .Values.dashboard.config.letsencryptDomain | quote }}
+            {{- with .Values.dashboard.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.dashboard.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.dashboard.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.dashboard.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.dashboard.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.dashboard.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.dashboard.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.dashboard.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+

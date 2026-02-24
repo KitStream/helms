@@ -1,0 +1,23 @@
+{{- if .Values.server.persistentVolume.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "netbird.server.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "netbird.server.labels" . | nindent 4 }}
+  {{- with .Values.server.persistentVolume.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    {{- toYaml .Values.server.persistentVolume.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.server.persistentVolume.size }}
+  {{- if .Values.server.persistentVolume.storageClass }}
+  storageClassName: {{ .Values.server.persistentVolume.storageClass | quote }}
+  {{- end }}
+{{- end }}
+

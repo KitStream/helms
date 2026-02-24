@@ -1,0 +1,18 @@
+apiVersion: v2
+name: netbird
+description: A Helm chart for deploying NetBird VPN management, signal, dashboard, and relay services on Kubernetes
+type: application
+version: 0.1.0
+appVersion: "0.65.3"
+keywords:
+  - netbird
+  - vpn
+  - wireguard
+  - mesh
+home: https://netbird.io
+sources:
+  - https://github.com/netbirdio/netbird
+maintainers:
+  - name: KitStream
+    url: https://github.com/KitStream
+
