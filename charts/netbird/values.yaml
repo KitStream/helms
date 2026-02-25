@@ -27,6 +27,56 @@ serviceAccount:
 imagePullSecrets: []
 
 # =============================================================================
+# Database Configuration
+# =============================================================================
+# Structured database connection parameters. The chart constructs the
+# internal DSN from these fields — you never need to build a DSN string.
+#
+# For sqlite, only `database.type` is needed (no host/port/user/password).
+# For postgresql and mysql, the chart:
+#   1. Waits for the database to be reachable (Initium wait-for)
+#   2. Creates the database if it doesn't exist (Initium seed)
+#   3. Constructs the DSN and renders it into the server config
+# =============================================================================
+database:
+  # -- Database engine. Options: sqlite, postgresql, mysql.
+  type: "sqlite"
+
+  # -- Database hostname. Required for postgresql and mysql.
+  host: ""
+
+  # -- Database port. Defaults to 5432 for postgresql, 3306 for mysql.
+  # Ignored for sqlite.
+  port: ""
+
+  # -- Database user. Required for postgresql and mysql.
+  user: ""
+
+  # -- Database name. Required for postgresql and mysql.
+  name: ""
+
+  # -- Kubernetes Secret containing the database password.
+  # Required for postgresql and mysql. Ignored for sqlite.
+  #
+  # Example Secret:
+  #   apiVersion: v1
+  #   kind: Secret
+  #   metadata:
+  #     name: netbird-db-password
+  #   type: Opaque
+  #   stringData:
+  #     password: "s3cret"
+  passwordSecret:
+    # -- Name of the Kubernetes Secret containing the password.
+    secretName: ""
+    # -- Key within the Secret that holds the password value.
+    secretKey: "password"
+
+  # -- SSL mode for PostgreSQL connections (e.g. disable, require, verify-ca,
+  # verify-full). Ignored for mysql and sqlite.
+  sslMode: "disable"
+
+# =============================================================================
 # Combined NetBird Server (Management + Signal + Relay + STUN)
 # =============================================================================
 server:
@@ -42,45 +92,38 @@ server:
     # -- Image pull policy.
     pullPolicy: IfNotPresent
 
-  # -- Init container image used to generate config.yaml at pod startup.
-  # The init container uses GNU envsubst (from the gettext-envsubst Alpine
-  # package) to substitute ${VAR} placeholders in the config.yaml template
-  # with secret values read from mounted Kubernetes Secrets. The package is
-  # installed at runtime via `apk add --no-cache gettext-envsubst` (~40 KB).
+  # -- Init container image used for config rendering, database readiness
+  # checks, and database creation.
   #
-  # User-supplied values in server.config.* are escaped at chart-render
-  # time: any "$" in user input is rewritten to "${DOLLAR}" (where DOLLAR
-  # is exported as a literal "$" by the init script), so envsubst will
-  # never accidentally interpret user data as a variable reference.
+  # Initium (https://github.com/KitStream/initium) provides:
+  #   - `render`   — envsubst-based config template rendering
+  #   - `wait-for` — TCP/HTTP readiness probes with retry
+  #   - `seed`     — declarative database/schema creation
   #
-  # Initium (https://github.com/KitStream/initium) is used as the init
-  # container to render the config template with secret values injected
-  # from Kubernetes Secrets via the `render` subcommand (envsubst mode).
+  # The init container runs non-root (UID 65534) with a read-only
+  # filesystem, no capabilities, and no shell (FROM scratch).
   initImage:
     # -- Init container image repository.
     repository: ghcr.io/kitstream/initium
     # -- Init container image tag.
-    tag: "0.1.2"
+    tag: "1.0.0"
 
-  # -- Component-level image pull secrets. Overrides the global imagePullSecrets
-  # when set. Each entry is a map with a "name" key.
+  # -- Component-level image pull secrets.
   imagePullSecrets: []
 
   # ---------------------------------------------------------------------------
   # Server config.yaml — structured fields
   #
   # These fields are rendered into a config.yaml.tpl template stored in a
-  # ConfigMap. At pod startup, an init container uses GNU envsubst to
-  # substitute ${VAR} placeholders with secret values from Kubernetes
-  # Secrets, producing the final config.yaml mounted into the server
-  # container. User-supplied values below are automatically escaped so
-  # that any "$" characters in your values are preserved literally.
+  # ConfigMap. At pod startup, Initium's render subcommand substitutes
+  # ${VAR} placeholders with secret values from Kubernetes Secrets,
+  # producing the final config.yaml. User-supplied values below are
+  # automatically escaped so that any "$" characters are preserved.
   #
   # See: https://docs.netbird.io/selfhosted/configuration-files
   # ---------------------------------------------------------------------------
   config:
     # -- The address and port the combined server listens on inside the container.
-    # TLS is handled by the reverse proxy / ingress controller.
     listenAddress: ":80"
 
     # -- The public-facing URL where peers connect to the server.
@@ -107,8 +150,7 @@ server:
     # in containers) or specify a file path.
     logFile: "console"
 
-    # -- Data directory path where the server stores its database and state
-    # files. Maps to the persistent volume mount.
+    # -- Data directory path where the server stores its database and state files.
     dataDir: "/var/lib/netbird"
 
     # -- Authentication / embedded IdP settings.
@@ -130,113 +172,41 @@ server:
       cliRedirectURIs:
         - "http://localhost:53000/"
 
-    # -- Database / store settings.
-    store:
-      # -- Database engine. Options: sqlite, postgres, mysql.
-      # For postgres/mysql, a DSN must be supplied via the secrets reference below.
-      engine: "sqlite"
-      # -- Note: store.dsn and store.encryptionKey are sensitive and injected
-      # at runtime from Kubernetes Secrets — see server.secrets below.
-      # When using sqlite, dsn is rendered as an empty string.
-
   # ---------------------------------------------------------------------------
   # Secret references — sensitive config.yaml values
   #
-  # Each entry specifies the Kubernetes Secret name and key from which the
-  # value is read by the init container at pod startup. The Secret must
-  # exist in the same namespace as the release.
-  #
-  # Templating engine:
-  #   The ConfigMap stores a config.yaml.tpl template that uses envsubst
-  #   ${VAR} syntax for secret placeholders. At pod startup the Initium
-  #   init container (https://github.com/KitStream/initium) reads secret
-  #   values from Kubernetes Secrets via secretKeyRef env vars and runs
-  #   its `render` subcommand (envsubst mode) to produce the final
-  #   config.yaml. User-supplied values in server.config.* are escaped
-  #   at chart-render time so that any "$" in user input is preserved
-  #   literally and cannot trigger unintended variable substitution.
-  #
-  # External Secret format:
-  #   When you supply your own Secret (secretName is set), the Secret must
-  #   contain the key specified by secretKey. The value must be a
-  #   base64-encoded representation of exactly 32 random bytes (for
-  #   authSecret and storeEncryptionKey). You can generate one with:
-  #     openssl rand -base64 32
-  #   Example Secret for authSecret + storeEncryptionKey in one Secret:
-  #     apiVersion: v1
-  #     kind: Secret
-  #     metadata:
-  #       name: my-netbird-secrets
-  #     type: Opaque
-  #     stringData:
-  #       authSecret: "q+3Df8Jk9mR2...base64-of-32-bytes..."
-  #       encryptionKey: "xY7bP0wN4aK1...base64-of-32-bytes..."
+  # The ConfigMap stores a config.yaml.tpl template that uses envsubst
+  # ${VAR} syntax for secret placeholders. At pod startup the Initium
+  # init container reads secret values via secretKeyRef env vars and runs
+  # its `render` subcommand to produce the final config.yaml.
   #
   # Auto-generation:
   #   Set autoGenerate: true (and leave secretName empty) to have this chart
-  #   create a Secret containing a base64-encoded 32-byte random value on
-  #   first install (via Helm's randBytes 32). The generated Secret uses
-  #   the `data:` field (randBytes 32 | b64enc — the outer base64 layer is
-  #   for Kubernetes, the inner base64 string is what the server reads and
-  #   decodes to 32 raw bytes). The Secret carries the annotation
-  #   "helm.sh/resource-policy: keep" so it survives helm uninstall /
-  #   upgrade. Subsequent upgrades reuse the existing value via Helm lookup.
-  #   Supported for: authSecret, storeEncryptionKey.
-  #   NOT supported for: storeDsn (must be supplied externally).
+  #   create a Secret on first install (via Helm's randBytes 32). The Secret
+  #   carries "helm.sh/resource-policy: keep" so it survives uninstall/upgrade.
   # ---------------------------------------------------------------------------
   secrets:
-    # -- Shared authentication secret used internally by the combined server
-    # for relay credential validation.
-    # Value: base64-encoded 32 random bytes (generate with: openssl rand -base64 32).
+    # -- Shared authentication secret for relay credential validation.
+    # Value: base64-encoded 32 random bytes (openssl rand -base64 32).
     authSecret:
       # -- Name of an existing Kubernetes Secret. Leave empty to auto-generate.
       secretName: ""
-      # -- Key within the Secret that holds the value.
+      # -- Key within the Secret.
       secretKey: "authSecret"
-      # -- When true and secretName is empty, the chart creates a Secret
-      # (using data: with randBytes 32 | b64enc) on first install and reuses
-      # it on upgrades.
+      # -- Auto-generate on first install.
       autoGenerate: true
 
-    # -- Encryption key for sensitive data at rest (setup keys, API tokens,
-    # etc. stored in the database). Must be exactly 32 bytes. Must be backed
-    # up — losing it means losing access to encrypted data.
-    # Value: base64-encoded 32 random bytes (generate with: openssl rand -base64 32).
+    # -- Encryption key for sensitive data at rest. Must be exactly 32 bytes.
+    # Value: base64-encoded 32 random bytes (openssl rand -base64 32).
     storeEncryptionKey:
       # -- Name of an existing Kubernetes Secret. Leave empty to auto-generate.
       secretName: ""
-      # -- Key within the Secret that holds the value.
+      # -- Key within the Secret.
       secretKey: "encryptionKey"
-      # -- When true and secretName is empty, the chart creates a Secret
-      # (using data: with randBytes 32 | b64enc) on first install and reuses
-      # it on upgrades.
+      # -- Auto-generate on first install.
       autoGenerate: true
 
-    # -- Database connection string (DSN) for postgres or mysql engines.
-    # Only required when server.config.store.engine is not "sqlite".
-    # Auto-generation is NOT supported — you must supply an external Secret.
-    #
-    # The DSN value format depends on the store engine:
-    #   postgres: "host=<host> user=<user> password=<pw> dbname=<db> port=<port>"
-    #   mysql:    "<user>:<password>@tcp(<host>:<port>)/<dbname>"
-    #
-    # Example Secret:
-    #   apiVersion: v1
-    #   kind: Secret
-    #   metadata:
-    #     name: netbird-db
-    #   type: Opaque
-    #   stringData:
-    #     dsn: "host=pg.example.com user=netbird password=s3cret dbname=netbird port=5432"
-    storeDsn:
-      # -- Name of the Kubernetes Secret containing the DSN.
-      secretName: ""
-      # -- Key within the Secret that holds the DSN value.
-      secretKey: "dsn"
-
-
-  # -- Persistent volume for server data mounted at the configured dataDir.
-  # Used for SQLite databases, encryption keys, and other runtime state.
+  # -- Persistent volume for server data.
   persistentVolume:
     # -- Whether to create a PersistentVolumeClaim.
     enabled: true
@@ -251,118 +221,56 @@ server:
     annotations: {}
 
   # -- STUN UDP port the server listens on inside the container.
-  # Exposed via a dedicated LoadBalancer service for NAT traversal.
   stunPort: 3478
 
-  # -- Primary service exposing the combined HTTP port (API, OAuth2, gRPC, relay, ws-proxy).
+  # -- Primary service exposing the combined HTTP port.
   service:
-    # -- Kubernetes service type.
     type: ClusterIP
-    # -- The combined server listens on a single HTTP port for everything
-    # (management API, OAuth2, gRPC signal, gRPC management, relay, ws-proxy).
     port: 80
 
-  # -- Dedicated service for the STUN/TURN UDP port required for NAT traversal.
+  # -- Dedicated service for the STUN/TURN UDP port.
   stunService:
-    # -- Kubernetes service type. LoadBalancer is recommended so external
-    # clients can reach the STUN endpoint.
     type: LoadBalancer
-    # -- STUN service port.
     port: 3478
-    # -- Additional annotations (e.g. cloud-provider load-balancer settings).
     annotations: {}
 
   # -- Ingress for HTTP routes (API + OAuth2).
-  # Routes paths such as /api and /oauth2 to the server's HTTP port.
   ingress:
-    # -- Whether to create this Ingress resource.
     enabled: false
-    # -- Ingress class name (e.g. "nginx").
     className: "nginx"
-    # -- Additional annotations on the Ingress.
     annotations: {}
-    # -- List of host rules. Each entry has a host and a list of paths.
     hosts: []
-    #  - host: netbird.example.com
-    #    paths:
-    #      - path: /api
-    #        pathType: ImplementationSpecific
-    #      - path: /oauth2
-    #        pathType: ImplementationSpecific
-    # -- TLS configuration. Each entry specifies a secretName and list of hosts.
     tls: []
 
   # -- Ingress for gRPC routes (signal + management gRPC).
-  # Requires HTTP/2 (h2c) backend support. Default annotations configure the
-  # nginx ingress controller for GRPC backend protocol and extended timeouts
-  # needed by long-lived gRPC streams.
   ingressGrpc:
-    # -- Whether to create this Ingress resource.
     enabled: false
-    # -- Ingress class name.
     className: "nginx"
-    # -- Annotations. Defaults include GRPC backend-protocol, ssl-redirect,
-    # and 1-hour proxy timeouts for persistent gRPC connections.
     annotations:
       nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
       nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
       nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-    # -- List of host rules.
     hosts: []
-    #  - host: netbird.example.com
-    #    paths:
-    #      - path: /signalexchange.SignalExchange
-    #        pathType: ImplementationSpecific
-    #      - path: /management.ManagementService
-    #        pathType: ImplementationSpecific
-    # -- TLS configuration.
     tls: []
 
   # -- Ingress for relay and WebSocket routes.
-  # Routes /relay and /ws-proxy traffic which use WebSocket upgrades.
   ingressRelay:
-    # -- Whether to create this Ingress resource.
     enabled: false
-    # -- Ingress class name.
     className: "nginx"
-    # -- Additional annotations on the Ingress.
     annotations: {}
-    # -- List of host rules.
     hosts: []
-    #  - host: netbird.example.com
-    #    paths:
-    #      - path: /relay
-    #        pathType: ImplementationSpecific
-    #      - path: /ws-proxy
-    #        pathType: ImplementationSpecific
-    # -- TLS configuration.
     tls: []
 
-  # -- CPU/memory resource requests and limits for the server container.
+  # -- CPU/memory resource requests and limits.
   resources: {}
-    # limits:
-    #   cpu: 500m
-    #   memory: 512Mi
-    # requests:
-    #   cpu: 100m
-    #   memory: 128Mi
-
-  # -- Node selector labels for pod scheduling.
   nodeSelector: {}
-  # -- Tolerations for pod scheduling.
   tolerations: []
-  # -- Affinity rules for pod scheduling.
   affinity: {}
-  # -- Additional annotations added to the server pod.
   podAnnotations: {}
-  # -- Additional labels added to the server pod.
   podLabels: {}
-  # -- Pod-level security context (e.g. fsGroup, runAsUser).
   podSecurityContext: {}
-  # -- Container-level security context (e.g. readOnlyRootFilesystem, capabilities).
   securityContext: {}
-  # -- Liveness probe configuration. Checks the HTTP port.
   livenessProbe:
     failureThreshold: 3
     initialDelaySeconds: 15
@@ -370,7 +278,6 @@ server:
     timeoutSeconds: 3
     tcpSocket:
       port: http
-  # -- Readiness probe configuration. Checks the HTTP port.
   readinessProbe:
     failureThreshold: 3
     initialDelaySeconds: 15
@@ -383,169 +290,61 @@ server:
 # Dashboard
 # =============================================================================
 dashboard:
-  # -- Number of dashboard pod replicas.
   replicaCount: 1
 
-  # -- Container image configuration for the NetBird dashboard.
   image:
-    # -- Image repository.
     repository: netbirdio/dashboard
-    # -- Image tag. The dashboard follows its own release cycle, independent
-    # of the server's appVersion.
     tag: "v2.32.4"
-    # -- Image pull policy.
     pullPolicy: IfNotPresent
 
-  # -- Component-level image pull secrets. Overrides the global imagePullSecrets
-  # when set.
   imagePullSecrets: []
 
-  # ---------------------------------------------------------------------------
-  # Dashboard configuration
-  #
-  # These fields are rendered as environment variables on the dashboard
-  # container. They configure the dashboard's connection to the management
-  # API and the OAuth2 / OIDC authentication settings.
-  # See: https://docs.netbird.io/selfhosted/configuration-files
-  # ---------------------------------------------------------------------------
   config:
-    # -- Endpoint settings
-
-    # -- URL of the NetBird management API.
-    # Format: "https://netbird.example.com/api" or "https://netbird.example.com".
     mgmtApiEndpoint: ""
-
-    # -- URL of the NetBird management gRPC endpoint.
-    # Format: "https://netbird.example.com".
     mgmtGrpcApiEndpoint: ""
-
-    # -- OAuth2 / OIDC settings
-
-    # -- OAuth2 audience identifier for the dashboard client.
     authAudience: "netbird-dashboard"
-
-    # -- OAuth2 client ID for the dashboard.
     authClientId: "netbird-dashboard"
-
-    # -- OAuth2 authority / issuer URL.
-    # Format: "https://netbird.example.com/oauth2".
     authAuthority: ""
-
-    # -- Whether Auth0 is used as the identity provider. Set to "true" only
-    # when using Auth0.
     useAuth0: "false"
-
-    # -- OAuth2 scopes requested during authentication.
     authSupportedScopes: "openid profile email groups"
-
-    # -- Path where the dashboard redirects after authentication.
     authRedirectUri: "/nb-auth"
-
-    # -- Path for silent (iframe-based) token renewal.
     authSilentRedirectUri: "/nb-silent-auth"
-
-    # -- SSL / TLS settings
-
-    # -- The HTTPS port NGINX listens on inside the container.
     nginxSslPort: "443"
-
-    # -- Domain for Let's Encrypt certificate provisioning. Set to "none"
-    # when TLS is terminated externally (e.g. by an ingress controller).
     letsencryptDomain: "none"
 
-  # ---------------------------------------------------------------------------
-  # Dashboard secrets
-  # ---------------------------------------------------------------------------
   secrets:
-    # -- OAuth2 client secret for the dashboard. When using the embedded
-    # IdP this is typically empty. When using an external IdP (Auth0,
-    # Keycloak, etc.) supply the client secret via a Kubernetes Secret.
-    #
-    # If secretName is empty, the value of authClientSecret below is used
-    # directly as a plain-text env var (suitable for empty / non-sensitive
-    # values). When secretName is set, the value is read from the referenced
-    # Kubernetes Secret at the given key.
-    #
-    # Example external Secret:
-    #   apiVersion: v1
-    #   kind: Secret
-    #   metadata:
-    #     name: netbird-dashboard-oidc
-    #   type: Opaque
-    #   stringData:
-    #     clientSecret: "my-oidc-client-secret"
     authClientSecret:
-      # -- Plain-text value used when secretName is empty.
       value: ""
-      # -- Name of an existing Kubernetes Secret. Leave empty to use
-      # the plain-text value above.
       secretName: ""
-      # -- Key within the Secret that holds the client secret.
       secretKey: "clientSecret"
 
-  # -- Additional environment variables to set on the dashboard container.
-  # Use this for any env vars not covered by the structured config above.
-  # Each entry is a standard Kubernetes EnvVar object.
-  #
-  # Example:
-  #   extraEnv:
-  #     - name: MY_CUSTOM_VAR
-  #       value: "some-value"
-  #     - name: MY_SECRET_VAR
-  #       valueFrom:
-  #         secretKeyRef:
-  #           name: my-secret
-  #           key: my-key
   extraEnv: []
 
-  # -- Dashboard service configuration.
   service:
-    # -- Kubernetes service type.
     type: ClusterIP
-    # -- Service port.
     port: 80
 
-  # -- Dashboard ingress. Serves the UI on the root path (catch-all).
   ingress:
-    # -- Whether to create this Ingress resource.
     enabled: false
-    # -- Ingress class name.
     className: "nginx"
-    # -- Additional annotations on the Ingress.
     annotations: {}
-    # -- List of host rules.
     hosts: []
-    #  - host: netbird.example.com
-    #    paths:
-    #      - path: /
-    #        pathType: Prefix
-    # -- TLS configuration.
     tls: []
 
-  # -- CPU/memory resource requests and limits for the dashboard container.
   resources: {}
-  # -- Node selector labels for pod scheduling.
   nodeSelector: {}
-  # -- Tolerations for pod scheduling.
   tolerations: []
-  # -- Affinity rules for pod scheduling.
   affinity: {}
-  # -- Additional annotations added to the dashboard pod.
   podAnnotations: {}
-  # -- Additional labels added to the dashboard pod.
   podLabels: {}
-  # -- Pod-level security context.
   podSecurityContext: {}
-  # -- Container-level security context.
   securityContext: {}
-  # -- Liveness probe configuration. Checks / on the HTTP port.
   livenessProbe:
     httpGet:
       path: /
       port: http
     initialDelaySeconds: 10
     periodSeconds: 15
-  # -- Readiness probe configuration. Checks / on the HTTP port.
   readinessProbe:
     httpGet:
       path: /

@@ -24,7 +24,67 @@ should escape dollar signs in user-supplied values:
           engine: "sqlite"
           dsn: ""
           encryptionKey: "${ENCRYPTION_KEY}"
+should include seed.yaml for postgresql:
+  1: |
+    config.yaml.tpl: |
+      server:
+        listenAddress: ":80"
+        exposedAddress: ""
+        stunPorts:
+          - 3478
+        metricsPort: 9090
+        healthcheckAddress: ":9000"
+        logLevel: "info"
+        logFile: "console"
+
+        authSecret: "${AUTH_SECRET}"
+        dataDir: "/var/lib/netbird"
+
+        auth:
+          issuer: ""
+          signKeyRefreshEnabled: true
+          cliRedirectURIs:
+            - "http://localhost:53000/"
+
+        store:
+          engine: "postgres"
+          dsn: "host=pg.example.com user=netbird password=${DB_PASSWORD} dbname=netbird port=5432 sslmode=disable"
+          encryptionKey: "${ENCRYPTION_KEY}"
+    seed.yaml: |
+      database:
+        driver: postgres
+        url: "postgres://netbird:{{ env.DB_PASSWORD }}@pg.example.com:5432/?sslmode=disable"
+      phases:
+        - name: create-database
+          database: netbird
+          create_if_missing: true
 should match default config snapshot:
+  1: |
+    config.yaml.tpl: |
+      server:
+        listenAddress: ":80"
+        exposedAddress: ""
+        stunPorts:
+          - 3478
+        metricsPort: 9090
+        healthcheckAddress: ":9000"
+        logLevel: "info"
+        logFile: "console"
+
+        authSecret: "${AUTH_SECRET}"
+        dataDir: "/var/lib/netbird"
+
+        auth:
+          issuer: ""
+          signKeyRefreshEnabled: true
+          cliRedirectURIs:
+            - "http://localhost:53000/"
+
+        store:
+          engine: "sqlite"
+          dsn: ""
+          encryptionKey: "${ENCRYPTION_KEY}"
+should not include seed.yaml for sqlite:
   1: |
     config.yaml.tpl: |
       server:
@@ -157,7 +217,41 @@ should render listen address from values:
           engine: "sqlite"
           dsn: ""
           encryptionKey: "${ENCRYPTION_KEY}"
-should render postgres engine with DSN placeholder:
+should render mysql engine with constructed DSN:
+  1: |
+    config.yaml.tpl: |
+      server:
+        listenAddress: ":80"
+        exposedAddress: ""
+        stunPorts:
+          - 3478
+        metricsPort: 9090
+        healthcheckAddress: ":9000"
+        logLevel: "info"
+        logFile: "console"
+
+        authSecret: "${AUTH_SECRET}"
+        dataDir: "/var/lib/netbird"
+
+        auth:
+          issuer: ""
+          signKeyRefreshEnabled: true
+          cliRedirectURIs:
+            - "http://localhost:53000/"
+
+        store:
+          engine: "mysql"
+          dsn: "netbird:${DB_PASSWORD}@tcp(mysql.example.com:3306)/netbird"
+          encryptionKey: "${ENCRYPTION_KEY}"
+    seed.yaml: |
+      database:
+        driver: mysql
+        url: "mysql://netbird:{{ env.DB_PASSWORD }}@mysql.example.com:3306/netbird"
+      phases:
+        - name: create-database
+          database: netbird
+          create_if_missing: true
+should render postgres engine with constructed DSN:
   1: |
     config.yaml.tpl: |
       server:
@@ -181,8 +275,16 @@ should render postgres engine with DSN placeholder:
 
         store:
           engine: "postgres"
-          dsn: "${STORE_DSN}"
+          dsn: "host=pg.example.com user=netbird password=${DB_PASSWORD} dbname=netbird port=5432 sslmode=disable"
           encryptionKey: "${ENCRYPTION_KEY}"
+    seed.yaml: |
+      database:
+        driver: postgres
+        url: "postgres://netbird:{{ env.DB_PASSWORD }}@pg.example.com:5432/?sslmode=disable"
+      phases:
+        - name: create-database
+          database: netbird
+          create_if_missing: true
 should render sqlite engine with empty DSN:
   1: |
     config.yaml.tpl: |

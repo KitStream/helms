@@ -33,4 +33,4 @@ Components:
   {{- end }}
 {{- end }}
 
-  Database: {{ .Values.server.config.store.engine }}
+  Database: {{ .Values.database.type }}

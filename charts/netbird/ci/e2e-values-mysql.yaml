@@ -1,7 +1,17 @@
 # E2E test values — MySQL backend in a kind cluster.
 #
-# Requires: MySQL deployed in the same namespace before chart install.
-# The e2e script deploys mysql via a simple Deployment + Service.
+# The e2e script deploys mysql via a simple Deployment + Service
+# and creates the password secret before chart install.
+
+database:
+  type: mysql
+  host: "mysql.netbird-e2e.svc.cluster.local"
+  port: 3306
+  user: netbird
+  name: netbird
+  passwordSecret:
+    secretName: netbird-db-password
+    secretKey: password
 
 server:
   persistentVolume:
@@ -17,13 +27,6 @@ server:
       dashboardRedirectURIs:
         - "https://netbird.localhost/nb-auth"
         - "https://netbird.localhost/nb-silent-auth"
-    store:
-      engine: mysql
-
-  secrets:
-    storeDsn:
-      secretName: netbird-db-dsn
-      secretKey: dsn
 
   livenessProbe:
     failureThreshold: 10
@@ -47,5 +50,3 @@ dashboard:
     authAuthority: "https://auth.localhost"
     authClientId: "test-client"
     authAudience: "test-audience"
-
-

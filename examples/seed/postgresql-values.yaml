@@ -1,0 +1,65 @@
+# Example: NetBird with PostgreSQL
+#
+# The chart automatically:
+#   1. Waits for the database to be reachable (Initium wait-for)
+#   2. Creates the "netbird" database if it doesn't exist (Initium seed)
+#   3. Constructs the DSN internally — you never build a connection string
+#
+# Prerequisites:
+#   1. A PostgreSQL server reachable at the given host/port
+#   2. A Kubernetes Secret with the database password:
+#
+#      kubectl create secret generic netbird-db-password \
+#        --from-literal=password='s3cret' \
+#        -n netbird
+#
+# Install:
+#   helm install netbird ./charts/netbird \
+#     -n netbird --create-namespace \
+#     -f examples/seed/postgresql-values.yaml
+
+database:
+  type: postgresql
+  host: postgres.database.svc.cluster.local
+  port: 5432
+  user: netbird
+  name: netbird
+  sslMode: disable          # Options: disable, require, verify-ca, verify-full
+  passwordSecret:
+    secretName: netbird-db-password
+    secretKey: password
+
+server:
+  config:
+    exposedAddress: "https://netbird.example.com"
+    auth:
+      issuer: "https://auth.example.com"
+      dashboardRedirectURIs:
+        - "https://netbird.example.com/nb-auth"
+        - "https://netbird.example.com/nb-silent-auth"
+
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: netbird.example.com
+        paths:
+          - path: /api
+            pathType: ImplementationSpecific
+          - path: /oauth2
+            pathType: ImplementationSpecific
+    tls:
+      - secretName: netbird-tls
+        hosts:
+          - netbird.example.com
+
+dashboard:
+  config:
+    mgmtApiEndpoint: "https://netbird.example.com"
+    mgmtGrpcApiEndpoint: "https://netbird.example.com"
+    authAuthority: "https://auth.example.com"
+    authClientId: "netbird-dashboard"
+    authAudience: "netbird-dashboard"
+
