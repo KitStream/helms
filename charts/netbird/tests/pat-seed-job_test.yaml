@@ -1,0 +1,240 @@
+suite: PAT seed job tests
+templates:
+  - templates/pat-seed-job.yaml
+tests:
+  # ── Not rendered when disabled ───────────────────────────────────────
+
+  - it: should not render when pat.enabled is false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not render when pat is not configured
+    set:
+      pat.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # ── Basic rendering ─────────────────────────────────────────────────
+
+  - it: should render a Job when pat.enabled is true
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Job
+
+  - it: should have correct helm hook annotations
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: "post-install,post-upgrade"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "5"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: "before-hook-creation"
+
+  - it: should include pat-seed component label
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: pat-seed
+
+  # ── Init container: wait-server ──────────────────────────────────────
+
+  - it: should have wait-server init container using initium
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: wait-server
+      - equal:
+          path: spec.template.spec.initContainers[0].image
+          value: "ghcr.io/kitstream/initium:1.0.1"
+      - contains:
+          path: spec.template.spec.initContainers[0].args
+          content: "tcp://RELEASE-NAME-netbird-server:80"
+
+  - it: should set hardened securityContext on wait-server
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.readOnlyRootFilesystem
+          value: true
+
+  # ── Main container: pat-seed ─────────────────────────────────────────
+
+  - it: should have pat-seed container using initium
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: pat-seed
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "ghcr.io/kitstream/initium:1.0.1"
+
+  - it: should inject PAT_HASHED_TOKEN env var from secret
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      pat.secret.hashedTokenKey: myHashKey
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PAT_HASHED_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: my-pat-secret
+                key: myHashKey
+
+  - it: should not inject DB_PASSWORD for sqlite
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: sqlite
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DB_PASSWORD
+          any: true
+
+  - it: should inject DB_PASSWORD for postgresql
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
+      database.passwordSecret.secretKey: dbpass
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: pg-secret
+                key: dbpass
+
+  - it: should inject DB_PASSWORD for mysql
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: mysql
+      database.host: mysql.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: mysql-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mysql-secret
+                key: password
+
+  - it: should mount config volume
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: config
+            mountPath: /spec
+            readOnly: true
+
+  - it: should mount data volume for sqlite
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: sqlite
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: data
+            mountPath: /var/lib/netbird
+
+  - it: should not mount data volume for postgresql
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: data
+            mountPath: /var/lib/netbird
+
+  # ── Volumes ──────────────────────────────────────────────────────────
+
+  - it: should have config volume from configmap
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: config
+            configMap:
+              name: RELEASE-NAME-netbird-server-pat-seed
+
+  # ── Job spec ─────────────────────────────────────────────────────────
+
+  - it: should have correct backoffLimit and ttl
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+    asserts:
+      - equal:
+          path: spec.backoffLimit
+          value: 3
+      - equal:
+          path: spec.ttlSecondsAfterFinished
+          value: 300
+
+  - it: should set restartPolicy to OnFailure
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+    asserts:
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: OnFailure
+

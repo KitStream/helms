@@ -144,7 +144,7 @@ tests:
           value: config-init
       - equal:
           path: spec.template.spec.initContainers[0].image
-          value: "ghcr.io/kitstream/initium:1.0.0"
+          value: "ghcr.io/kitstream/initium:1.0.1"
 
   - it: should have only config-init for sqlite
     asserts:

@@ -34,3 +34,11 @@ Components:
 {{- end }}
 
   Database: {{ .Values.database.type }}
+{{- if .Values.pat.enabled }}
+
+  PAT Seeding: ENABLED
+    A post-install Job will seed a Personal Access Token into the database.
+    Secret: {{ .Values.pat.secret.secretName }}
+    The plaintext PAT can be retrieved with:
+      kubectl get secret {{ .Values.pat.secret.secretName }} -n {{ .Release.Namespace }} -o jsonpath='{.data.{{ .Values.pat.secret.tokenKey }}}' | base64 -d
+{{- end }}

@@ -77,6 +77,50 @@ database:
   sslMode: "disable"
 
 # =============================================================================
+# =============================================================================
+# PAT (Personal Access Token) Seeding
+# =============================================================================
+# Optionally seed the NetBird database with a Personal Access Token after
+# deployment. This enables immediate API access without manual token creation.
+#
+# Prerequisites:
+#   1. Generate a PAT and its hash (see README for instructions)
+#   2. Create a Kubernetes Secret with both values:
+#
+#      kubectl create secret generic netbird-pat \
+#        --from-literal=token='nbp_...' \
+#        --from-literal=hashedToken='base64hash...' \
+#        -n netbird
+# =============================================================================
+pat:
+  # -- Enable PAT seeding. When true, a post-install Job inserts a
+  # Personal Access Token into the database.
+  enabled: false
+
+  # -- Kubernetes Secret containing the PAT credentials.
+  secret:
+    # -- Name of the existing Secret with token and hashed token.
+    secretName: ""
+    # -- Key in the Secret holding the plaintext PAT (e.g. "nbp_...").
+    tokenKey: "token"
+    # -- Key in the Secret holding the base64-encoded SHA256 hash.
+    hashedTokenKey: "hashedToken"
+
+  # -- Display name for the seeded PAT.
+  name: "helm-seeded-token"
+
+  # -- User ID to associate the PAT with. A service user with this ID
+  # will be created if it does not exist.
+  userId: "helm-seed-user"
+
+  # -- Account ID for the seeded user. An account with this ID will be
+  # created if it does not exist.
+  accountId: "helm-seed-account"
+
+  # -- PAT expiration in days from the time of deployment.
+  expirationDays: 365
+
+
 # Combined NetBird Server (Management + Signal + Relay + STUN)
 # =============================================================================
 server:
@@ -106,7 +150,7 @@ server:
     # -- Init container image repository.
     repository: ghcr.io/kitstream/initium
     # -- Init container image tag.
-    tag: "1.0.0"
+    tag: "1.0.1"
 
   # -- Component-level image pull secrets.
   imagePullSecrets: []

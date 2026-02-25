@@ -160,6 +160,75 @@ dashboard:
           - netbird.example.com
 ```
 
+## Personal Access Token (PAT) Seeding
+
+The chart can optionally seed the database with a Personal Access Token
+after deployment. This enables immediate API access without manual token
+creation — useful for automation, CI/CD, and GitOps workflows.
+
+### Generating a PAT
+
+NetBird PATs have the format `nbp_<30-char-secret><6-char-checksum>` (40
+chars total). The database stores a base64-encoded SHA256 hash.
+
+Generate a token and its hash:
+
+```bash
+# Using Python
+python3 -c "
+import hashlib, base64, secrets, zlib
+secret = secrets.token_urlsafe(22)[:30]
+checksum = zlib.crc32(secret.encode()) & 0xffffffff
+chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+cs = ''
+v = checksum
+while v > 0: cs = chars[v % 62] + cs; v //= 62
+token = 'nbp_' + secret + cs.rjust(6, '0')
+hashed = base64.b64encode(hashlib.sha256(token.encode()).digest()).decode()
+print(f'Token:  {token}')
+print(f'Hash:   {hashed}')
+"
+
+# Or using openssl
+TOKEN="nbp_$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c30)000000"
+HASH=$(printf '%s' "$TOKEN" | openssl dgst -sha256 -binary | openssl base64 -A)
+echo "Token: $TOKEN"
+echo "Hash:  $HASH"
+```
+
+### Creating the Secret
+
+```bash
+kubectl create secret generic netbird-pat \
+  --from-literal=token='nbp_...' \
+  --from-literal=hashedToken='base64hash...' \
+  -n netbird
+```
+
+### Enabling PAT Seeding
+
+```yaml
+pat:
+  enabled: true
+  secret:
+    secretName: netbird-pat
+  name: "my-api-token"
+  expirationDays: 365
+```
+
+The chart creates a post-install/post-upgrade Helm hook Job that:
+1. Waits for the server to be reachable (TCP probe via Initium `wait-for`)
+2. Waits for the `accounts`, `users`, and `personal_access_tokens` tables
+   (Initium seed `wait_for`)
+3. Idempotently inserts a service user account and PAT
+
+### Using the PAT
+
+```bash
+# Authenticate with the PAT
+curl -H "Authorization: Token nbp_..." https://netbird.example.com/api/groups
+```
+
 ## Values Reference
 
 ### Global
@@ -185,6 +254,19 @@ dashboard:
 | `database.passwordSecret.secretName` | string | `""` | Secret containing the database password |
 | `database.passwordSecret.secretKey` | string | `"password"` | Key in the Secret |
 | `database.sslMode` | string | `"disable"` | SSL mode for PostgreSQL (ignored for mysql/sqlite) |
+
+### PAT (Personal Access Token)
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `pat.enabled` | bool | `false` | Enable PAT seeding via post-install Job |
+| `pat.secret.secretName` | string | `""` | Kubernetes Secret containing token and hash |
+| `pat.secret.tokenKey` | string | `"token"` | Key in Secret for the plaintext PAT |
+| `pat.secret.hashedTokenKey` | string | `"hashedToken"` | Key in Secret for the base64-encoded SHA256 hash |
+| `pat.name` | string | `"helm-seeded-token"` | Display name for the PAT |
+| `pat.userId` | string | `"helm-seed-user"` | User ID for the service user |
+| `pat.accountId` | string | `"helm-seed-account"` | Account ID for the service user |
+| `pat.expirationDays` | int | `365` | PAT expiration in days from deployment |
 
 ### Server
 
