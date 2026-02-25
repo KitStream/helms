@@ -1,8 +1,13 @@
 {{/*
 ConfigMap for the PAT seed spec. Only rendered when pat.enabled is true.
 Contains the Initium seed spec that inserts account, user, and PAT records.
+
+For SQLite this is a regular release resource (consumed by the sidecar in the
+Deployment). For external databases it remains a Helm hook so the seed Job
+can reference it during the post-install/post-upgrade phase.
 */}}
 {{- if .Values.pat.enabled }}
+{{- $isExternal := eq (include "netbird.database.isExternal" .) "true" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -13,10 +18,12 @@ metadata:
     app.kubernetes.io/name: {{ include "netbird.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: pat-seed
+  {{- if $isExternal }}
   annotations:
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "0"
     helm.sh/hook-delete-policy: before-hook-creation
+  {{- end }}
 data:
   pat-seed.yaml: |
     {{- include "netbird.pat.seedSpec" . | nindent 4 }}

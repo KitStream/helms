@@ -290,10 +290,6 @@ phases:
                 domain: "netbird.selfhosted"
                 domain_category: "private"
                 is_domain_primary_account: 1
-                network_identifier: "seed-network"
-                network_net: "100.64.0.0/10"
-                network_dns: ""
-                network_serial: 0
       - name: pat-user
         order: 2
         tables:

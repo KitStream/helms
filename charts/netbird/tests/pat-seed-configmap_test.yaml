@@ -17,10 +17,26 @@ tests:
       - isKind:
           of: ConfigMap
 
-  - it: should have helm hook annotations
+  # ── Hook annotations: only for external databases ──────────────────
+
+  - it: should not have helm hook annotations for sqlite
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
+      database.type: sqlite
+    asserts:
+      - notExists:
+          path: metadata.annotations["helm.sh/hook"]
+
+  - it: should have helm hook annotations for postgresql
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
     asserts:
       - equal:
           path: metadata.annotations["helm.sh/hook"]
@@ -28,6 +44,22 @@ tests:
       - equal:
           path: metadata.annotations["helm.sh/hook-weight"]
           value: "0"
+
+  - it: should have helm hook annotations for mysql
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: mysql
+      database.host: mysql.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: mysql-secret
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: "post-install,post-upgrade"
+
+  # ── Seed spec content ──────────────────────────────────────────────
 
   - it: should contain pat-seed.yaml key
     set:
@@ -136,4 +168,3 @@ tests:
       - matchRegex:
           path: data["pat-seed.yaml"]
           pattern: "table: personal_access_tokens"
-

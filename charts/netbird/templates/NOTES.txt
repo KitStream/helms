@@ -37,7 +37,13 @@ Components:
 {{- if .Values.pat.enabled }}
 
   PAT Seeding: ENABLED
+  {{- if eq .Values.database.type "sqlite" }}
+    A sidecar container in the server pod will seed a Personal Access Token
+    into the SQLite database. The sidecar shares the data volume with the
+    server (required for ReadWriteOnce PVCs).
+  {{- else }}
     A post-install Job will seed a Personal Access Token into the database.
+  {{- end }}
     Secret: {{ .Values.pat.secret.secretName }}
     The plaintext PAT can be retrieved with:
       kubectl get secret {{ .Values.pat.secret.secretName }} -n {{ .Release.Namespace }} -o jsonpath='{.data.{{ .Values.pat.secret.tokenKey }}}' | base64 -d

@@ -144,9 +144,9 @@ tests:
           value: config-init
       - equal:
           path: spec.template.spec.initContainers[0].image
-          value: "ghcr.io/kitstream/initium:1.0.1"
+          value: "ghcr.io/kitstream/initium:1.0.4"
 
-  - it: should have only config-init for sqlite
+  - it: should have only config-init for sqlite without pat
     asserts:
       - lengthEqual:
           path: spec.template.spec.initContainers
@@ -329,6 +329,210 @@ tests:
           path: spec.template.spec.initContainers[2].securityContext.runAsNonRoot
           value: true
 
+  # ── PAT seed native sidecar (SQLite only) ──────────────────────────
+
+  - it: should have only one container (server) when pat is disabled
+    set:
+      pat.enabled: false
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 1
+
+  - it: should have only one container (server) even with pat enabled for sqlite
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: sqlite
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 1
+
+  - it: should add pat-seed native sidecar as init container for sqlite
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: sqlite
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.initContainers
+          count: 2
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: config-init
+      - equal:
+          path: spec.template.spec.initContainers[1].name
+          value: pat-seed
+
+  - it: should set restartPolicy Always on pat-seed native sidecar
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: sqlite
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[1].restartPolicy
+          value: Always
+
+  - it: should use initium image for pat-seed sidecar
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: sqlite
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[1].image
+          value: "ghcr.io/kitstream/initium:1.0.4"
+
+  - it: should run seed command with --sidecar flag in pat-seed sidecar
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: sqlite
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[1].args
+          value:
+            - --sidecar
+            - seed
+            - --spec
+            - /spec/pat-seed.yaml
+
+  - it: should inject PAT_HASHED_TOKEN into sidecar
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      pat.secret.hashedTokenKey: myHash
+      database.type: sqlite
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: PAT_HASHED_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: my-pat-secret
+                key: myHash
+
+  - it: should run sidecar as root for SQLite PVC access
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: sqlite
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[1].securityContext.runAsUser
+          value: 0
+      - equal:
+          path: spec.template.spec.initContainers[1].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.initContainers[1].securityContext.allowPrivilegeEscalation
+          value: false
+
+  - it: should mount pat-seed-config and data volumes on sidecar
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: sqlite
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[1].volumeMounts
+          content:
+            name: pat-seed-config
+            mountPath: /spec
+            readOnly: true
+      - contains:
+          path: spec.template.spec.initContainers[1].volumeMounts
+          content:
+            name: data
+            mountPath: /var/lib/netbird
+
+  - it: should not add pat-seed sidecar for postgresql
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.initContainers
+          count: 3
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: db-wait
+      - equal:
+          path: spec.template.spec.initContainers[1].name
+          value: db-seed
+      - equal:
+          path: spec.template.spec.initContainers[2].name
+          value: config-init
+
+  - it: should add pat-seed-config volume for sqlite pat sidecar
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: sqlite
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: pat-seed-config
+            configMap:
+              name: RELEASE-NAME-netbird-server-pat-seed
+
+  - it: should not add pat-seed-config volume when pat is disabled
+    set:
+      pat.enabled: false
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: pat-seed-config
+          any: true
+
+  - it: should not add pat-seed-config volume for postgresql
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: pat-seed-config
+          any: true
+
+  - it: should include pat-seed checksum annotation for sqlite
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: sqlite
+    asserts:
+      - exists:
+          path: spec.template.metadata.annotations.checksum/pat-seed
+
+  - it: should not include pat-seed checksum for postgresql
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
+    asserts:
+      - notExists:
+          path: spec.template.metadata.annotations.checksum/pat-seed
+
   # ── Other deployment settings ────────────────────────────────────────
 
   - it: should set resource limits when specified
@@ -398,5 +602,3 @@ tests:
           path: spec.template.spec.containers[0].securityContext
           value:
             readOnlyRootFilesystem: true
-
-

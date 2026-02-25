@@ -219,9 +219,15 @@ if ! helm install "$RELEASE" "$CHART" \
   --set pat.secret.secretName=netbird-pat \
   "${EXTRA_SETS[@]}" \
   --timeout "$TIMEOUT"; then
-  log "Helm install failed — dumping PAT seed job logs..."
-  kubectl -n "$NAMESPACE" logs job/"$RELEASE"-server-pat-seed --all-containers 2>/dev/null || true
-  kubectl -n "$NAMESPACE" describe job/"$RELEASE"-server-pat-seed 2>/dev/null || true
+  log "Helm install failed — dumping logs..."
+  if [ "$BACKEND" = "sqlite" ]; then
+    log "PAT seed sidecar logs:"
+    kubectl -n "$NAMESPACE" logs deployment/"$RELEASE"-server -c pat-seed 2>/dev/null || true
+  else
+    log "PAT seed job logs:"
+    kubectl -n "$NAMESPACE" logs job/"$RELEASE"-server-pat-seed --all-containers 2>/dev/null || true
+    kubectl -n "$NAMESPACE" describe job/"$RELEASE"-server-pat-seed 2>/dev/null || true
+  fi
   fail "Helm install failed"
 fi
 
@@ -237,14 +243,37 @@ kubectl -n "$NAMESPACE" get pods -o wide
 log "Running helm test..."
 helm test "$RELEASE" -n "$NAMESPACE" --timeout 2m
 
-# ── Wait for PAT seed job to complete ─────────────────────────────────
-log "Waiting for PAT seed job to complete..."
-kubectl -n "$NAMESPACE" wait --for=condition=complete \
-  job/"$RELEASE"-server-pat-seed --timeout=180s || {
-  log "PAT seed job logs:"
-  kubectl -n "$NAMESPACE" logs job/"$RELEASE"-server-pat-seed --all-containers || true
-  fail "PAT seed job did not complete"
-}
+# ── Wait for PAT seed to complete ─────────────────────────────────────
+if [ "$BACKEND" = "sqlite" ]; then
+  # SQLite: PAT seed runs as a native sidecar (init container with
+  # restartPolicy: Always) in the server pod. The sidecar stays alive
+  # after seeding (--sidecar flag), so we check its logs for the
+  # "seed execution completed" message rather than waiting for
+  # container termination.
+  log "Waiting for PAT seed native sidecar to complete seeding..."
+  for i in $(seq 1 60); do
+    LOGS=$(kubectl -n "$NAMESPACE" logs deployment/"$RELEASE"-server -c pat-seed 2>/dev/null || echo "")
+    if echo "$LOGS" | grep -q "seed execution completed"; then
+      log "PAT seed sidecar completed seeding successfully"
+      break
+    fi
+    if [ "$i" -eq 60 ]; then
+      log "PAT seed sidecar logs:"
+      echo "$LOGS"
+      fail "PAT seed sidecar did not complete seeding within timeout"
+    fi
+    sleep 3
+  done
+else
+  # External DB: PAT seed runs as a separate hook Job.
+  log "Waiting for PAT seed job to complete..."
+  kubectl -n "$NAMESPACE" wait --for=condition=complete \
+    job/"$RELEASE"-server-pat-seed --timeout=180s || {
+    log "PAT seed job logs:"
+    kubectl -n "$NAMESPACE" logs job/"$RELEASE"-server-pat-seed --all-containers || true
+    fail "PAT seed job did not complete"
+  }
+fi
 # ── Verify PAT authentication ─────────────────────────────────────────
 log "Verifying PAT authentication against API..."
 # Re-derive the PAT_TOKEN (same deterministic generation as above)
