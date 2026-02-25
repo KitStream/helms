@@ -236,3 +236,89 @@ phases:
     database: {{ .Values.database.name }}
     create_if_missing: true
 {{- end }}
+{{/*
+netbird.database.patDatabaseUrl — constructs the database URL for PAT seeding.
+This URL connects to the target database (not the system database).
+For sqlite, it points to the database file.
+The spec is a MiniJinja template — {{ env.DB_PASSWORD }} is resolved
+by Initium at runtime from the DB_PASSWORD environment variable.
+*/}}
+{{- define "netbird.database.patDatabaseUrl" -}}
+{{- if eq .Values.database.type "sqlite" -}}
+/var/lib/netbird/store.db
+{{- else if eq .Values.database.type "postgresql" -}}
+postgres://{{ .Values.database.user }}:{{ "{{ env.DB_PASSWORD }}" }}@{{ .Values.database.host }}:{{ include "netbird.database.port" . }}/{{ .Values.database.name }}?sslmode={{ .Values.database.sslMode }}
+{{- else if eq .Values.database.type "mysql" -}}
+mysql://{{ .Values.database.user }}:{{ "{{ env.DB_PASSWORD }}" }}@{{ .Values.database.host }}:{{ include "netbird.database.port" . }}/{{ .Values.database.name }}
+{{- end -}}
+{{- end }}
+{{/*
+netbird.pat.seedSpec — renders the Initium seed spec YAML for
+inserting a Personal Access Token into the database.
+The seed waits for the personal_access_tokens table (created by NetBird
+on startup via GORM AutoMigrate), then idempotently inserts the
+account, user, and PAT records.
+MiniJinja placeholders:
+  {{ env.PAT_HASHED_TOKEN }} — base64-encoded SHA256 hash of the PAT
+*/}}
+{{- define "netbird.pat.seedSpec" -}}
+database:
+  driver: {{ include "netbird.database.engine" . }}
+  url: "{{ include "netbird.database.patDatabaseUrl" . }}"
+phases:
+  - name: seed-pat
+    order: 1
+    wait_for:
+      - type: table
+        name: personal_access_tokens
+        timeout: 120s
+      - type: table
+        name: users
+        timeout: 120s
+      - type: table
+        name: accounts
+        timeout: 120s
+    seed_sets:
+      - name: pat-account
+        order: 1
+        tables:
+          - table: accounts
+            unique_key: [id]
+            rows:
+              - id: {{ .Values.pat.accountId | quote }}
+                created_by: "helm-seed"
+                domain: "netbird.selfhosted"
+                domain_category: "private"
+                is_domain_primary_account: 1
+                network_identifier: "seed-network"
+                network_net: "100.64.0.0/10"
+                network_dns: ""
+                network_serial: 0
+      - name: pat-user
+        order: 2
+        tables:
+          - table: users
+            unique_key: [id]
+            rows:
+              - id: {{ .Values.pat.userId | quote }}
+                account_id: {{ .Values.pat.accountId | quote }}
+                role: "admin"
+                is_service_user: 1
+                service_user_name: "helm-seed-service-user"
+                non_deletable: 0
+                blocked: 0
+                issued: "api"
+      - name: pat-token
+        order: 3
+        tables:
+          - table: personal_access_tokens
+            unique_key: [id]
+            rows:
+              - id: "helm-seeded-pat"
+                user_id: {{ .Values.pat.userId | quote }}
+                name: {{ .Values.pat.name | quote }}
+                hashed_token: "{{ "{{ env.PAT_HASHED_TOKEN }}" }}"
+                expiration_date: {{ now | dateModify (printf "+%dh" (mul .Values.pat.expirationDays 24)) | date "2006-01-02 15:04:05" | quote }}
+                created_by: {{ .Values.pat.userId | quote }}
+                created_at: {{ now | date "2006-01-02 15:04:05" | quote }}
+{{- end }}

@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Added
+
+- **PAT seeding**: Optional Personal Access Token seeding via `pat.*` values.
+  When `pat.enabled: true`, a post-install/post-upgrade Helm hook Job seeds
+  a service user account and PAT into the database using Initium's `seed` command.
+  The Job waits for the server to create its schema (GORM AutoMigrate), then
+  idempotently inserts account, user, and PAT records.
+- PAT seed Job uses `wait-for` init container to wait for server TCP readiness
+  before seeding.
+- PAT seed spec uses `wait_for` to wait for `accounts`, `users`, and
+  `personal_access_tokens` tables before inserting data.
+- PAT seed data uses `unique_key` for idempotent inserts (safe on re-installs).
+- PAT seed ConfigMap and Job are Helm hooks (post-install, post-upgrade) with
+  `before-hook-creation` delete policy.
+- E2E tests extended to verify PAT authentication with `GET /api/groups`
+  across all three database backends (SQLite, PostgreSQL, MySQL).
+- 28 new unit tests for PAT seed Job and ConfigMap templates.
+- Upgraded Initium init container image to v1.0.1 (fixes PostgreSQL inserts
+  on tables with text primary keys).
+
 ### Changed
 
 - **Breaking:** Replaced raw DSN secret (`server.secrets.storeDsn`) with structured

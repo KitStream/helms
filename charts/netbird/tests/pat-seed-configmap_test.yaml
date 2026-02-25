@@ -1,0 +1,139 @@
+suite: PAT seed configmap tests
+templates:
+  - templates/pat-seed-configmap.yaml
+tests:
+  - it: should not render when pat.enabled is false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render when pat.enabled is true
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ConfigMap
+
+  - it: should have helm hook annotations
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: "post-install,post-upgrade"
+      - equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "0"
+
+  - it: should contain pat-seed.yaml key
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+    asserts:
+      - exists:
+          path: data["pat-seed.yaml"]
+
+  - it: should match seed spec snapshot for sqlite
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: sqlite
+      pat.accountId: test-account
+      pat.userId: test-user
+      pat.name: test-pat-name
+    asserts:
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "driver: sqlite"
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "url: \"/var/lib/netbird/store.db\""
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "id: \"test-account\""
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "id: \"test-user\""
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "name: \"test-pat-name\""
+
+  - it: should use postgresql database URL when database.type is postgresql
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: postgresql
+      database.host: pg.example.com
+      database.port: 5432
+      database.user: netbird
+      database.name: netbird
+      database.sslMode: disable
+      database.passwordSecret.secretName: pg-secret
+    asserts:
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "driver: postgres"
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "postgres://netbird.*pg\\.example\\.com:5432/netbird"
+
+  - it: should use mysql database URL when database.type is mysql
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: mysql
+      database.host: mysql.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: mysql-secret
+    asserts:
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "driver: mysql"
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "mysql://netbird.*mysql\\.example\\.com:3306/netbird"
+
+  - it: should wait for required tables
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+    asserts:
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "name: personal_access_tokens"
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "name: users"
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "name: accounts"
+
+  - it: should use PAT_HASHED_TOKEN MiniJinja placeholder
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+    asserts:
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "env\\.PAT_HASHED_TOKEN"
+
+  - it: should seed account user and pat tables
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+    asserts:
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "table: accounts"
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "table: users"
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "table: personal_access_tokens"
+
