@@ -17,7 +17,7 @@ jobs:
       - name: Set up Helm
         uses: azure/setup-helm@v4
         with:
-          version: v3.17.0
+          version: v4.0.2
 
       - name: Helm lint
         run: |
@@ -49,7 +49,7 @@ jobs:
       - name: Set up Helm
         uses: azure/setup-helm@v4
         with:
-          version: v3.17.0
+          version: v4.0.2
 
       - name: Create kind cluster
         uses: helm/kind-action@v1
@@ -82,7 +82,7 @@ jobs:
       - name: Set up Helm
         uses: azure/setup-helm@v4
         with:
-          version: v3.17.0
+          version: v4.0.2
 
       - name: Create kind cluster
         uses: helm/kind-action@v1
@@ -117,7 +117,7 @@ jobs:
       - name: Set up Helm
         uses: azure/setup-helm@v4
         with:
-          version: v3.17.0
+          version: v4.0.2
 
       - name: Create kind cluster
         uses: helm/kind-action@v1

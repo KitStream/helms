@@ -13,6 +13,11 @@ This chart deploys the NetBird self-hosted stack as two components:
 
 The server uses a single `config.yaml` that is rendered from a ConfigMap template with sensitive values injected at pod startup from Kubernetes Secrets via [Initium](https://github.com/KitStream/initium)'s `render` subcommand (envsubst mode).
 
+For external databases (PostgreSQL, MySQL), the chart automatically:
+1. **Waits** for the database to be reachable (`initium wait-for`)
+2. **Creates** the database if it doesn't exist (`initium seed --spec`)
+3. **Constructs** the DSN internally from structured `database.*` values — you never need to build a DSN string
+
 ## Prerequisites
 
 - Kubernetes 1.24+
@@ -30,6 +35,8 @@ helm install netbird ./charts/netbird \
 
 ## Minimal Configuration Example
 
+### SQLite (default)
+
 ```yaml
 server:
   config:
@@ -39,6 +46,60 @@ server:
       dashboardRedirectURIs:
         - "https://netbird.example.com/nb-auth"
         - "https://netbird.example.com/nb-silent-auth"
+```
+
+### PostgreSQL
+
+```yaml
+database:
+  type: postgresql
+  host: postgres.database.svc.cluster.local
+  port: 5432
+  user: netbird
+  name: netbird
+  passwordSecret:
+    secretName: netbird-db-password
+    secretKey: password
+
+server:
+  config:
+    exposedAddress: "https://netbird.example.com"
+    auth:
+      issuer: "https://auth.example.com"
+      dashboardRedirectURIs:
+        - "https://netbird.example.com/nb-auth"
+        - "https://netbird.example.com/nb-silent-auth"
+```
+
+### MySQL
+
+```yaml
+database:
+  type: mysql
+  host: mysql.database.svc.cluster.local
+  port: 3306
+  user: netbird
+  name: netbird
+  passwordSecret:
+    secretName: netbird-db-password
+    secretKey: password
+
+server:
+  config:
+    exposedAddress: "https://netbird.example.com"
+    auth:
+      issuer: "https://auth.example.com"
+      dashboardRedirectURIs:
+        - "https://netbird.example.com/nb-auth"
+        - "https://netbird.example.com/nb-silent-auth"
+```
+
+The chart automatically constructs the DSN and adds init containers to wait for the database and create it if needed.
+
+For all configurations, add ingress settings:
+
+```yaml
+server:
   ingress:
     enabled: true
     hosts:
@@ -112,6 +173,19 @@ dashboard:
 | `serviceAccount.annotations` | object | `{}` | ServiceAccount annotations |
 | `serviceAccount.name` | string | `""` | ServiceAccount name override |
 
+### Database
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `database.type` | string | `"sqlite"` | Database engine (`sqlite`, `postgresql`, `mysql`) |
+| `database.host` | string | `""` | Database hostname (required for postgresql/mysql) |
+| `database.port` | string | `""` | Database port (defaults: 5432 for postgresql, 3306 for mysql) |
+| `database.user` | string | `""` | Database user (required for postgresql/mysql) |
+| `database.name` | string | `""` | Database name (required for postgresql/mysql) |
+| `database.passwordSecret.secretName` | string | `""` | Secret containing the database password |
+| `database.passwordSecret.secretKey` | string | `"password"` | Key in the Secret |
+| `database.sslMode` | string | `"disable"` | SSL mode for PostgreSQL (ignored for mysql/sqlite) |
+
 ### Server
 
 | Key | Type | Default | Description |
@@ -121,7 +195,7 @@ dashboard:
 | `server.image.tag` | string | `""` (appVersion) | Server image tag |
 | `server.image.pullPolicy` | string | `"IfNotPresent"` | Image pull policy |
 | `server.initImage.repository` | string | `"ghcr.io/kitstream/initium"` | Init container image ([Initium](https://github.com/KitStream/initium)) |
-| `server.initImage.tag` | string | `"0.1.2"` | Init container image tag |
+| `server.initImage.tag` | string | `"1.0.0"` | Init container image tag |
 | `server.imagePullSecrets` | list | `[]` | Component-level pull secrets |
 
 #### Server Configuration
@@ -140,7 +214,6 @@ dashboard:
 | `server.config.auth.signKeyRefreshEnabled` | bool | `true` | Auto-refresh IdP signing keys |
 | `server.config.auth.dashboardRedirectURIs` | list | `[]` | Dashboard OAuth2 redirect URIs |
 | `server.config.auth.cliRedirectURIs` | list | `["http://localhost:53000/"]` | CLI redirect URIs |
-| `server.config.store.engine` | string | `"sqlite"` | Database engine (sqlite, postgres, mysql) |
 
 #### Server Secrets
 
@@ -152,8 +225,6 @@ dashboard:
 | `server.secrets.storeEncryptionKey.secretName` | string | `""` | Existing Secret name (empty = auto-generate) |
 | `server.secrets.storeEncryptionKey.secretKey` | string | `"encryptionKey"` | Key in the Secret |
 | `server.secrets.storeEncryptionKey.autoGenerate` | bool | `true` | Auto-generate on first install |
-| `server.secrets.storeDsn.secretName` | string | `""` | Secret containing the database DSN |
-| `server.secrets.storeDsn.secretKey` | string | `"dsn"` | Key in the DSN Secret |
 
 #### Server Storage
 

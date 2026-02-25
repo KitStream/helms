@@ -90,9 +90,9 @@ EOF
   log "Waiting for PostgreSQL to be ready..."
   kubectl -n "$NAMESPACE" rollout status deployment/postgres --timeout=120s
 
-  # Create the DSN secret for netbird
-  kubectl -n "$NAMESPACE" create secret generic netbird-db-dsn \
-    --from-literal=dsn="host=postgres.${NAMESPACE}.svc.cluster.local user=netbird password=testpassword dbname=netbird port=5432"
+  # Create the password secret for netbird
+  kubectl -n "$NAMESPACE" create secret generic netbird-db-password \
+    --from-literal=password="testpassword"
 }
 
 deploy_mysql() {
@@ -153,9 +153,9 @@ EOF
   log "Waiting for MySQL to be ready..."
   kubectl -n "$NAMESPACE" rollout status deployment/mysql --timeout=180s
 
-  # Create the DSN secret for netbird
-  kubectl -n "$NAMESPACE" create secret generic netbird-db-dsn \
-    --from-literal=dsn="netbird:testpassword@tcp(mysql.${NAMESPACE}.svc.cluster.local:3306)/netbird"
+  # Create the password secret for netbird
+  kubectl -n "$NAMESPACE" create secret generic netbird-db-password \
+    --from-literal=password="testpassword"
 }
 
 case "$BACKEND" in

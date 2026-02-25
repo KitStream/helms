@@ -7,6 +7,9 @@
 # - Uses sqlite engine with auto-generated secrets
 # - Sets dummy auth values (server will start but auth won't be functional)
 
+database:
+  type: sqlite
+
 server:
   persistentVolume:
     enabled: false
@@ -21,8 +24,6 @@ server:
       dashboardRedirectURIs:
         - "https://netbird.localhost/nb-auth"
         - "https://netbird.localhost/nb-silent-auth"
-    store:
-      engine: sqlite
 
   # Lower probe thresholds for faster feedback in CI
   livenessProbe:
@@ -47,4 +48,3 @@ dashboard:
     authAuthority: "https://auth.localhost"
     authClientId: "test-client"
     authAudience: "test-audience"
-

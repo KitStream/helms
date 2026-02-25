@@ -135,6 +135,26 @@ tests:
             name: data
             emptyDir: {}
 
+  # ── Init container: config-init ──────────────────────────────────────
+
+  - it: should use config-init container with initium image
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: config-init
+      - equal:
+          path: spec.template.spec.initContainers[0].image
+          value: "ghcr.io/kitstream/initium:1.0.0"
+
+  - it: should have only config-init for sqlite
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.initContainers
+          count: 1
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: config-init
+
   - it: should inject auto-generated secrets via env vars by default
     asserts:
       - contains:
@@ -178,27 +198,138 @@ tests:
                 name: my-enc-secret
                 key: encryptionKey
 
-  - it: should inject DSN secret via env var for postgres engine
-    set:
-      server.config.store.engine: postgres
-      server.secrets.storeDsn.secretName: my-db-secret
-    asserts:
-      - contains:
-          path: spec.template.spec.initContainers[0].env
-          content:
-            name: STORE_DSN
-            valueFrom:
-              secretKeyRef:
-                name: my-db-secret
-                key: dsn
-
-  - it: should not inject DSN env var for sqlite engine
+  - it: should not inject DB_PASSWORD env var for sqlite
     asserts:
       - notContains:
           path: spec.template.spec.initContainers[0].env
           content:
-            name: STORE_DSN
+            name: DB_PASSWORD
           any: true
+
+  # ── Init containers: db-wait + db-seed for external DB ───────────────
+
+  - it: should add db-wait and db-seed init containers for postgresql
+    set:
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: my-pg-secret
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.initContainers
+          count: 3
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: db-wait
+      - equal:
+          path: spec.template.spec.initContainers[1].name
+          value: db-seed
+      - equal:
+          path: spec.template.spec.initContainers[2].name
+          value: config-init
+
+  - it: should add db-wait and db-seed init containers for mysql
+    set:
+      database.type: mysql
+      database.host: mysql.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: my-mysql-secret
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.initContainers
+          count: 3
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: db-wait
+      - equal:
+          path: spec.template.spec.initContainers[1].name
+          value: db-seed
+      - equal:
+          path: spec.template.spec.initContainers[2].name
+          value: config-init
+
+  - it: should configure db-wait with correct target for postgresql
+    set:
+      database.type: postgresql
+      database.host: pg.example.com
+      database.port: 5432
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: my-pg-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[0].args
+          content: "tcp://pg.example.com:5432"
+
+  - it: should configure db-wait with default port for mysql
+    set:
+      database.type: mysql
+      database.host: mysql.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: my-mysql-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[0].args
+          content: "tcp://mysql.example.com:3306"
+
+  - it: should inject DB_PASSWORD into db-seed for postgresql
+    set:
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: my-pg-secret
+      database.passwordSecret.secretKey: dbpass
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: my-pg-secret
+                key: dbpass
+
+  - it: should inject DB_PASSWORD into config-init for postgresql
+    set:
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: my-pg-secret
+      database.passwordSecret.secretKey: dbpass
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[2].env
+          content:
+            name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: my-pg-secret
+                key: dbpass
+
+  - it: should set hardened securityContext on all init containers for postgresql
+    set:
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: my-pg-secret
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.initContainers[1].securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.initContainers[2].securityContext.runAsNonRoot
+          value: true
+
+  # ── Other deployment settings ────────────────────────────────────────
 
   - it: should set resource limits when specified
     set:
@@ -268,12 +399,4 @@ tests:
           value:
             readOnlyRootFilesystem: true
 
-  - it: should use init container with initium image
-    asserts:
-      - equal:
-          path: spec.template.spec.initContainers[0].name
-          value: config-init
-      - equal:
-          path: spec.template.spec.initContainers[0].image
-          value: "ghcr.io/kitstream/initium:0.1.2"
 

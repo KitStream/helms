@@ -1,7 +1,18 @@
 # E2E test values — PostgreSQL backend in a kind cluster.
 #
-# Requires: PostgreSQL deployed in the same namespace before chart install.
-# The e2e script deploys postgres via a simple Deployment + Service.
+# The e2e script deploys postgres via a simple Deployment + Service
+# and creates the password secret before chart install.
+
+database:
+  type: postgresql
+  host: "postgres.netbird-e2e.svc.cluster.local"
+  port: 5432
+  user: netbird
+  name: netbird
+  passwordSecret:
+    secretName: netbird-db-password
+    secretKey: password
+  sslMode: disable
 
 server:
   persistentVolume:
@@ -17,13 +28,6 @@ server:
       dashboardRedirectURIs:
         - "https://netbird.localhost/nb-auth"
         - "https://netbird.localhost/nb-silent-auth"
-    store:
-      engine: postgres
-
-  secrets:
-    storeDsn:
-      secretName: netbird-db-dsn
-      secretKey: dsn
 
   livenessProbe:
     failureThreshold: 10
@@ -47,5 +51,4 @@ dashboard:
     authAuthority: "https://auth.localhost"
     authClientId: "test-client"
     authAudience: "test-audience"
-
 

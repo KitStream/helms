@@ -98,29 +98,22 @@ from a map of ENV_VAR: "secretName/secretKey"
 {{- end }}
 
 {{/*
-netbird.escapeEnvsubst — escapes a string so that envsubst will not
-interpret any ${...} or $VAR references inside user-supplied values.
-All "$" characters are replaced with the literal string "${DOLLAR}"
-and the init container pre-defines DOLLAR='$' as an env var before
-Initium's render subcommand runs envsubst.
+netbird.escapeEnvsubst — escapes "$" to "${DOLLAR}" so Initium's
+render subcommand (envsubst mode) won't interpret user values.
 */}}
 {{- define "netbird.escapeEnvsubst" -}}
 {{- . | replace "$" "${DOLLAR}" }}
 {{- end }}
 
 {{/*
-netbird.server.generatedSecretName — name of the Secret this chart creates
-when auto-generating secrets (authSecret, storeEncryptionKey).
+netbird.server.generatedSecretName — name of the auto-generated Secret.
 */}}
 {{- define "netbird.server.generatedSecretName" -}}
 {{- printf "%s-generated" (include "netbird.server.fullname" .) | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
-netbird.server.resolveSecretName — resolves the effective secret name for a
-given secret ref. If the user supplied a secretName, use it. Otherwise, if
-autoGenerate is true, use the chart-generated secret name. Otherwise return "".
-Usage: include "netbird.server.resolveSecretName" (dict "ref" .Values.server.secrets.authSecret "generated" (include "netbird.server.generatedSecretName" .))
+netbird.server.resolveSecretName — resolves the effective secret name.
 */}}
 {{- define "netbird.server.resolveSecretName" -}}
 {{- if .ref.secretName -}}
@@ -130,23 +123,61 @@ Usage: include "netbird.server.resolveSecretName" (dict "ref" .Values.server.sec
 {{- end -}}
 {{- end }}
 
+{{/* ===== Database helpers ===== */}}
+
+{{/*
+netbird.database.engine — maps database.type to the NetBird store engine name.
+  postgresql -> postgres, mysql -> mysql, sqlite -> sqlite
+*/}}
+{{- define "netbird.database.engine" -}}
+{{- if eq .Values.database.type "postgresql" -}}postgres
+{{- else -}}{{ .Values.database.type }}
+{{- end -}}
+{{- end }}
+
+{{/*
+netbird.database.port — resolves the effective database port.
+Defaults to 5432 for postgresql, 3306 for mysql.
+*/}}
+{{- define "netbird.database.port" -}}
+{{- if .Values.database.port -}}
+{{- .Values.database.port -}}
+{{- else if eq .Values.database.type "postgresql" -}}5432
+{{- else if eq .Values.database.type "mysql" -}}3306
+{{- else -}}0
+{{- end -}}
+{{- end }}
+
+{{/*
+netbird.database.isExternal — true when database.type is not sqlite.
+*/}}
+{{- define "netbird.database.isExternal" -}}
+{{- ne .Values.database.type "sqlite" -}}
+{{- end }}
+
+{{/*
+netbird.database.dsn — constructs the DSN string with ${DB_PASSWORD} placeholder.
+  postgresql: host=H user=U password=${DB_PASSWORD} dbname=D port=P sslmode=S
+  mysql:      U:${DB_PASSWORD}@tcp(H:P)/D
+  sqlite:     (empty string)
+*/}}
+{{- define "netbird.database.dsn" -}}
+{{- if eq .Values.database.type "postgresql" -}}
+host={{ .Values.database.host }} user={{ .Values.database.user }} password=${DB_PASSWORD} dbname={{ .Values.database.name }} port={{ include "netbird.database.port" . }} sslmode={{ .Values.database.sslMode }}
+{{- else if eq .Values.database.type "mysql" -}}
+{{ .Values.database.user }}:${DB_PASSWORD}@tcp({{ .Values.database.host }}:{{ include "netbird.database.port" . }})/{{ .Values.database.name }}
+{{- end -}}
+{{- end }}
+
 {{/*
 netbird.server.configTemplate — renders the config.yaml template with
-envsubst-style placeholders for sensitive values that the Initium init
-container will substitute at runtime using its `render` subcommand
-(envsubst mode).
+envsubst-style placeholders. Initium's render subcommand substitutes
+these at pod startup.
 
-Placeholders (envsubst variables):
+Placeholders:
   ${AUTH_SECRET}       <- server.secrets.authSecret
   ${ENCRYPTION_KEY}    <- server.secrets.storeEncryptionKey
-  ${STORE_DSN}         <- server.secrets.storeDsn (only for postgres/mysql)
-
-All user-supplied values are escaped via the netbird.escapeEnvsubst helper
-so that any "$" in user input is rendered literally and not interpreted by
-envsubst.
-
-The generated structure matches the official NetBird config.yaml format:
-  https://docs.netbird.io/selfhosted/configuration-files
+  ${DB_PASSWORD}       <- database.passwordSecret (embedded in DSN, non-sqlite only)
 */}}
 {{- define "netbird.server.configTemplate" -}}
 server:
@@ -179,7 +210,29 @@ server:
     {{- end }}
 
   store:
-    engine: {{ include "netbird.escapeEnvsubst" .Values.server.config.store.engine | quote }}
-    dsn: {{ if ne .Values.server.config.store.engine "sqlite" }}"${STORE_DSN}"{{ else }}""{{ end }}
+    engine: {{ include "netbird.database.engine" . | quote }}
+    dsn: {{ if eq (include "netbird.database.isExternal" .) "true" }}"{{ include "netbird.database.dsn" . }}"{{ else }}""{{ end }}
     encryptionKey: "${ENCRYPTION_KEY}"
+{{- end }}
+
+{{/*
+netbird.database.seedSpec — renders the Initium seed spec YAML for
+creating the target database if it doesn't exist.
+Only rendered for non-sqlite database types.
+
+The spec is a MiniJinja template — {{ env.DB_PASSWORD }} is resolved
+by Initium at runtime from the DB_PASSWORD environment variable.
+*/}}
+{{- define "netbird.database.seedSpec" -}}
+database:
+  driver: {{ include "netbird.database.engine" . }}
+{{- if eq .Values.database.type "postgresql" }}
+  url: "postgres://{{ .Values.database.user }}:{{ "{{ env.DB_PASSWORD }}" }}@{{ .Values.database.host }}:{{ include "netbird.database.port" . }}/?sslmode={{ .Values.database.sslMode }}"
+{{- else if eq .Values.database.type "mysql" }}
+  url: "mysql://{{ .Values.database.user }}:{{ "{{ env.DB_PASSWORD }}" }}@{{ .Values.database.host }}:{{ include "netbird.database.port" . }}/{{ .Values.database.name }}"
+{{- end }}
+phases:
+  - name: create-database
+    database: {{ .Values.database.name }}
+    create_if_missing: true
 {{- end }}

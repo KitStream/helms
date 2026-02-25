@@ -11,3 +11,4 @@
 *.tgz
 charts/*/charts/*.tgz
 
+CLAUDE.md

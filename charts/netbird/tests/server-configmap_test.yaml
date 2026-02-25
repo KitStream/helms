@@ -37,14 +37,47 @@ tests:
 
   - it: should render sqlite engine with empty DSN
     set:
-      server.config.store.engine: sqlite
+      database.type: sqlite
     asserts:
       - matchSnapshot:
           path: data
 
-  - it: should render postgres engine with DSN placeholder
+  - it: should render postgres engine with constructed DSN
     set:
-      server.config.store.engine: postgres
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: my-pg-secret
+    asserts:
+      - matchSnapshot:
+          path: data
+
+  - it: should render mysql engine with constructed DSN
+    set:
+      database.type: mysql
+      database.host: mysql.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: my-mysql-secret
+    asserts:
+      - matchSnapshot:
+          path: data
+
+  - it: should include seed.yaml for postgresql
+    set:
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: my-pg-secret
+    asserts:
+      - matchSnapshot:
+          path: data
+
+  - it: should not include seed.yaml for sqlite
+    set:
+      database.type: sqlite
     asserts:
       - matchSnapshot:
           path: data
