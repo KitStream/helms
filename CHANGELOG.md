@@ -10,22 +10,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - **PAT seeding**: Optional Personal Access Token seeding via `pat.*` values.
-  When `pat.enabled: true`, a post-install/post-upgrade Helm hook Job seeds
-  a service user account and PAT into the database using Initium's `seed` command.
-  The Job waits for the server to create its schema (GORM AutoMigrate), then
-  idempotently inserts account, user, and PAT records.
-- PAT seed Job uses `wait-for` init container to wait for server TCP readiness
-  before seeding.
+  When `pat.enabled: true`, a service user account and PAT are seeded into
+  the database using Initium's `seed` command. The seed waits for the server
+  to create its schema (GORM AutoMigrate), then idempotently inserts account,
+  user, and PAT records.
+- **SQLite**: PAT seed runs as a Kubernetes native sidecar (init container with
+  `restartPolicy: Always`, K8s 1.28+) in the server Deployment. The sidecar
+  uses Initium's `--sidecar` flag to stay alive after seeding, maintaining
+  full pod readiness (`2/2 Running`). This avoids ReadWriteOnce PVC
+  multi-attach issues that prevent a separate Job from mounting the PVC.
+- **PostgreSQL/MySQL**: PAT seed runs as a post-install/post-upgrade Helm hook
+  Job with a `wait-for` init container for server TCP readiness.
 - PAT seed spec uses `wait_for` to wait for `accounts`, `users`, and
   `personal_access_tokens` tables before inserting data.
 - PAT seed data uses `unique_key` for idempotent inserts (safe on re-installs).
-- PAT seed ConfigMap and Job are Helm hooks (post-install, post-upgrade) with
-  `before-hook-creation` delete policy.
+- PAT seed ConfigMap is a regular release resource for SQLite and a Helm hook
+  for external databases.
 - E2E tests extended to verify PAT authentication with `GET /api/groups`
   across all three database backends (SQLite, PostgreSQL, MySQL).
-- 28 new unit tests for PAT seed Job and ConfigMap templates.
-- Upgraded Initium init container image to v1.0.1 (fixes PostgreSQL inserts
-  on tables with text primary keys).
+- Unit tests for PAT seed Job, ConfigMap, and sidecar templates.
+- Upgraded Initium init container image to v1.0.4 (adds `--sidecar` flag for
+  keeping the process alive after task completion, SHA256/base64 template
+  filters, PostgreSQL text primary key fix).
 
 ### Changed
 

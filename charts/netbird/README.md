@@ -20,7 +20,7 @@ For external databases (PostgreSQL, MySQL), the chart automatically:
 
 ## Prerequisites
 
-- Kubernetes 1.24+
+- Kubernetes 1.24+ (1.28+ required for SQLite PAT seeding with native sidecars)
 - Helm 3.x
 - An OAuth2 / OIDC identity provider (Auth0, Keycloak, Authentik, Zitadel, etc.)
 - An Ingress controller (nginx recommended) with TLS termination
@@ -216,11 +216,24 @@ pat:
   expirationDays: 365
 ```
 
-The chart creates a post-install/post-upgrade Helm hook Job that:
-1. Waits for the server to be reachable (TCP probe via Initium `wait-for`)
-2. Waits for the `accounts`, `users`, and `personal_access_tokens` tables
-   (Initium seed `wait_for`)
-3. Idempotently inserts a service user account and PAT
+The seeding mechanism depends on the database type:
+
+- **SQLite**: The seed runs as a **native sidecar** (Kubernetes 1.28+) in the
+  server Deployment. It is declared as an init container with
+  `restartPolicy: Always` and uses the `--sidecar` flag to stay alive after
+  seeding. This is required because SQLite uses a local file and
+  ReadWriteOnce PVCs cannot be mounted by multiple pods simultaneously.
+- **PostgreSQL / MySQL**: The seed runs as a post-install/post-upgrade Helm
+  hook Job that connects to the database over the network.
+
+In both cases, the seed:
+1. Waits for the `accounts`, `users`, and `personal_access_tokens` tables
+   to exist (created by the server via GORM AutoMigrate)
+2. Idempotently inserts a service user account and PAT
+
+> **Note:** The SQLite PAT sidecar requires **Kubernetes 1.28+** for native
+> sidecar support. The sidecar stays alive after completing the seed
+> (via Initium's `--sidecar` flag), so the pod shows `2/2 Running`.
 
 ### Using the PAT
 
@@ -277,7 +290,7 @@ curl -H "Authorization: Token nbp_..." https://netbird.example.com/api/groups
 | `server.image.tag` | string | `""` (appVersion) | Server image tag |
 | `server.image.pullPolicy` | string | `"IfNotPresent"` | Image pull policy |
 | `server.initImage.repository` | string | `"ghcr.io/kitstream/initium"` | Init container image ([Initium](https://github.com/KitStream/initium)) |
-| `server.initImage.tag` | string | `"1.0.0"` | Init container image tag |
+| `server.initImage.tag` | string | `"1.0.4"` | Init container image tag |
 | `server.imagePullSecrets` | list | `[]` | Component-level pull secrets |
 
 #### Server Configuration

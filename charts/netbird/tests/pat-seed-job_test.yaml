@@ -16,12 +16,53 @@ tests:
       - hasDocuments:
           count: 0
 
-  # ── Basic rendering ─────────────────────────────────────────────────
+  # ── Not rendered for SQLite (uses sidecar instead) ─────────────────
 
-  - it: should render a Job when pat.enabled is true
+  - it: should not render for sqlite even when pat.enabled is true
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
+      database.type: sqlite
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not render for sqlite with PV enabled
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: sqlite
+      server.persistentVolume.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  # ── Basic rendering (external DB only) ─────────────────────────────
+
+  - it: should render a Job for postgresql
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Job
+
+  - it: should render a Job for mysql
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: mysql
+      database.host: mysql.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: mysql-secret
     asserts:
       - hasDocuments:
           count: 1
@@ -32,6 +73,11 @@ tests:
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
     asserts:
       - equal:
           path: metadata.annotations["helm.sh/hook"]
@@ -47,6 +93,11 @@ tests:
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
     asserts:
       - equal:
           path: metadata.labels["app.kubernetes.io/component"]
@@ -58,13 +109,18 @@ tests:
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
     asserts:
       - equal:
           path: spec.template.spec.initContainers[0].name
           value: wait-server
       - equal:
           path: spec.template.spec.initContainers[0].image
-          value: "ghcr.io/kitstream/initium:1.0.1"
+          value: "ghcr.io/kitstream/initium:1.0.4"
       - contains:
           path: spec.template.spec.initContainers[0].args
           content: "tcp://RELEASE-NAME-netbird-server:80"
@@ -73,6 +129,11 @@ tests:
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
     asserts:
       - equal:
           path: spec.template.spec.initContainers[0].securityContext.runAsNonRoot
@@ -87,19 +148,29 @@ tests:
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
     asserts:
       - equal:
           path: spec.template.spec.containers[0].name
           value: pat-seed
       - equal:
           path: spec.template.spec.containers[0].image
-          value: "ghcr.io/kitstream/initium:1.0.1"
+          value: "ghcr.io/kitstream/initium:1.0.4"
 
   - it: should inject PAT_HASHED_TOKEN env var from secret
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
       pat.secret.hashedTokenKey: myHashKey
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
     asserts:
       - contains:
           path: spec.template.spec.containers[0].env
@@ -109,18 +180,6 @@ tests:
               secretKeyRef:
                 name: my-pat-secret
                 key: myHashKey
-
-  - it: should not inject DB_PASSWORD for sqlite
-    set:
-      pat.enabled: true
-      pat.secret.secretName: my-pat-secret
-      database.type: sqlite
-    asserts:
-      - notContains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: DB_PASSWORD
-          any: true
 
   - it: should inject DB_PASSWORD for postgresql
     set:
@@ -165,6 +224,11 @@ tests:
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
     asserts:
       - contains:
           path: spec.template.spec.containers[0].volumeMounts
@@ -172,18 +236,6 @@ tests:
             name: config
             mountPath: /spec
             readOnly: true
-
-  - it: should mount data volume for sqlite
-    set:
-      pat.enabled: true
-      pat.secret.secretName: my-pat-secret
-      database.type: sqlite
-    asserts:
-      - contains:
-          path: spec.template.spec.containers[0].volumeMounts
-          content:
-            name: data
-            mountPath: /var/lib/netbird
 
   - it: should not mount data volume for postgresql
     set:
@@ -201,12 +253,34 @@ tests:
             name: data
             mountPath: /var/lib/netbird
 
+  - it: should run non-root for external databases
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 65534
+
   # ── Volumes ──────────────────────────────────────────────────────────
 
   - it: should have config volume from configmap
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
     asserts:
       - contains:
           path: spec.template.spec.volumes
@@ -221,6 +295,11 @@ tests:
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
     asserts:
       - equal:
           path: spec.backoffLimit
@@ -233,8 +312,12 @@ tests:
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
     asserts:
       - equal:
           path: spec.template.spec.restartPolicy
           value: OnFailure
-
