@@ -140,3 +140,38 @@ jobs:
           kubectl -n netbird-e2e logs deployment/mysql --tail=50 || true
           echo "=== Events ==="
           kubectl -n netbird-e2e get events --sort-by='.lastTimestamp' || true
+
+  e2e-oidc-keycloak:
+    name: E2E — OIDC (Keycloak)
+    runs-on: ubuntu-latest
+    needs: lint-and-unit-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v4.0.2
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: helms-e2e
+
+      - name: Run e2e test (oidc-keycloak)
+        run: ci/scripts/e2e-oidc.sh keycloak
+
+      - name: Show debug info on failure
+        if: failure()
+        run: |
+          echo "=== Pod status ==="
+          kubectl -n netbird-e2e get pods -o wide || true
+          echo "=== Server logs ==="
+          kubectl -n netbird-e2e logs deployment/netbird-e2e-server --all-containers --tail=100 || true
+          echo "=== Dashboard logs ==="
+          kubectl -n netbird-e2e logs deployment/netbird-e2e-dashboard --tail=100 || true
+          echo "=== Keycloak logs ==="
+          kubectl -n netbird-e2e logs deployment/keycloak --tail=100 || true
+          echo "=== Events ==="
+          kubectl -n netbird-e2e get events --sort-by='.lastTimestamp' || true

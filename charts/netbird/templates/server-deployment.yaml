@@ -124,6 +124,20 @@ spec:
                   name: {{ .Values.database.passwordSecret.secretName }}
                   key: {{ .Values.database.passwordSecret.secretKey }}
             {{- end }}
+            {{- if and .Values.oidc.enabled .Values.oidc.idpManager.enabled .Values.oidc.idpManager.clientConfig.clientSecret.secretName }}
+            - name: IDP_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.oidc.idpManager.clientConfig.clientSecret.secretName }}
+                  key: {{ .Values.oidc.idpManager.clientConfig.clientSecret.secretKey }}
+            {{- end }}
+            {{- if and .Values.oidc.enabled .Values.oidc.pkceAuthFlow.enabled .Values.oidc.pkceAuthFlow.providerConfig.clientSecret.secretName }}
+            - name: PKCE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.oidc.pkceAuthFlow.providerConfig.clientSecret.secretName }}
+                  key: {{ .Values.oidc.pkceAuthFlow.providerConfig.clientSecret.secretKey }}
+            {{- end }}
           securityContext:
             runAsNonRoot: true
             runAsUser: 65534
