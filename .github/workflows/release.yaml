@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*-[0-9]*.[0-9]*.[0-9]*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    name: Package & Publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v4.0.2
+
+      - name: Parse tag
+        id: parse
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION=$(echo "$TAG" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+$')
+          CHART="${TAG%-"${VERSION}"}"
+          echo "chart=${CHART}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate chart exists
+        run: |
+          if [ ! -f "charts/${{ steps.parse.outputs.chart }}/Chart.yaml" ]; then
+            echo "::error::Chart directory charts/${{ steps.parse.outputs.chart }} not found"
+            exit 1
+          fi
+
+      - name: Validate chart version matches tag
+        run: |
+          CHART_VERSION=$(grep '^version:' "charts/${{ steps.parse.outputs.chart }}/Chart.yaml" | awk '{print $2}')
+          if [ "$CHART_VERSION" != "${{ steps.parse.outputs.version }}" ]; then
+            echo "::error::Tag version (${{ steps.parse.outputs.version }}) does not match Chart.yaml version ($CHART_VERSION)"
+            exit 1
+          fi
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Package chart
+        run: helm package "charts/${{ steps.parse.outputs.chart }}"
+
+      - name: Push to OCI registry
+        run: helm push "${{ steps.parse.outputs.chart }}-${{ steps.parse.outputs.version }}.tgz" oci://ghcr.io/kitstream/helms
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "${{ steps.parse.outputs.chart }}-${{ steps.parse.outputs.version }}.tgz"
+          generate_release_notes: true

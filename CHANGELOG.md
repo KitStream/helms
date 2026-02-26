@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **OCI registry publishing**: Charts are published to `oci://ghcr.io/kitstream/helms`
+  on tagged releases via GitHub Actions. Install with
+  `helm install netbird oci://ghcr.io/kitstream/helms/netbird --version <version>`.
+- **GitHub Releases**: Tagged releases automatically create GitHub Releases with
+  packaged chart artifacts and auto-generated release notes.
+- **ArtifactHub metadata**: Chart.yaml includes ArtifactHub annotations for
+  discoverability on [artifacthub.io](https://artifacthub.io).
+- **SECURITY.md**: Security policy with vulnerability reporting instructions and
+  a summary of the project's security practices.
+- **README badges**: CI status, release status, license, and ArtifactHub badges
+  on both the repository and chart READMEs.
+
 - **PAT seeding**: Optional Personal Access Token seeding via `pat.*` values.
   When `pat.enabled: true`, a service user account and PAT are seeded into
   the database using Initium's `seed` command. The seed waits for the server
