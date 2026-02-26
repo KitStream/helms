@@ -1,0 +1,100 @@
+# E2E test values — OIDC with Zitadel deployed in-cluster.
+#
+# Zitadel is deployed alongside a PostgreSQL pod in the same namespace.
+# The test bootstraps Zitadel with a machine user + PAT, then uses the
+# Management API to create:
+#   - A project "NETBIRD"
+#   - A "Dashboard" OIDC app (public, user-agent type)
+#   - A "CLI" OIDC app (native, device code grant)
+#   - A service user with client_credentials for IdP management
+#   - A test human user for token acquisition
+#
+# Dynamic values (client IDs, service user credentials) are substituted
+# at runtime by the e2e script before helm install.
+
+database:
+  type: sqlite
+
+server:
+  persistentVolume:
+    enabled: false
+
+  stunService:
+    type: ClusterIP
+
+  config:
+    exposedAddress: "https://netbird.localhost"
+    auth:
+      issuer: "http://zitadel.netbird-e2e.svc.cluster.local:8080"
+      dashboardRedirectURIs:
+        - "https://netbird.localhost/nb-auth"
+        - "https://netbird.localhost/nb-silent-auth"
+
+  livenessProbe:
+    failureThreshold: 20
+    initialDelaySeconds: 30
+    periodSeconds: 5
+    timeoutSeconds: 3
+    tcpSocket:
+      port: http
+  readinessProbe:
+    failureThreshold: 20
+    initialDelaySeconds: 30
+    periodSeconds: 5
+    timeoutSeconds: 3
+    tcpSocket:
+      port: http
+
+oidc:
+  enabled: true
+  audience: "PLACEHOLDER_PROJECT_ID"
+  userIdClaim: "sub"
+  configEndpoint: "http://zitadel.netbird-e2e.svc.cluster.local:8080/.well-known/openid-configuration"
+
+  deviceAuthFlow:
+    enabled: true
+    provider: "hosted"
+    providerConfig:
+      clientId: "PLACEHOLDER_CLI_CLIENT_ID"
+      audience: "PLACEHOLDER_PROJECT_ID"
+      tokenEndpoint: "http://zitadel.netbird-e2e.svc.cluster.local:8080/oauth/v2/token"
+      deviceAuthEndpoint: "http://zitadel.netbird-e2e.svc.cluster.local:8080/oauth/v2/device_authorization"
+      scope: "openid profile email"
+      useIdToken: false
+
+  pkceAuthFlow:
+    enabled: true
+    providerConfig:
+      clientId: "PLACEHOLDER_DASHBOARD_CLIENT_ID"
+      audience: "PLACEHOLDER_PROJECT_ID"
+      clientSecret:
+        value: ""
+      tokenEndpoint: "http://zitadel.netbird-e2e.svc.cluster.local:8080/oauth/v2/token"
+      authorizationEndpoint: "http://zitadel.netbird-e2e.svc.cluster.local:8080/oauth/v2/authorize"
+      scope: "openid profile email"
+      redirectUrls:
+        - "https://netbird.localhost/nb-auth"
+        - "https://netbird.localhost/nb-silent-auth"
+      useIdToken: false
+
+  idpManager:
+    enabled: true
+    managerType: "zitadel"
+    clientConfig:
+      issuer: "http://zitadel.netbird-e2e.svc.cluster.local:8080"
+      tokenEndpoint: "http://zitadel.netbird-e2e.svc.cluster.local:8080/oauth/v2/token"
+      clientId: "PLACEHOLDER_SVC_CLIENT_ID"
+      clientSecret:
+        secretName: netbird-zitadel-idp-secret
+        secretKey: clientSecret
+      grantType: "client_credentials"
+    extraConfig:
+      ManagementEndpoint: "http://zitadel.netbird-e2e.svc.cluster.local:8080/management/v1"
+
+dashboard:
+  config:
+    mgmtApiEndpoint: "https://netbird.localhost"
+    mgmtGrpcApiEndpoint: "https://netbird.localhost"
+    authAuthority: "http://zitadel.netbird-e2e.svc.cluster.local:8080"
+    authClientId: "PLACEHOLDER_DASHBOARD_CLIENT_ID"
+    authAudience: "PLACEHOLDER_PROJECT_ID"

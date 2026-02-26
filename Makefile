@@ -1,4 +1,4 @@
-.PHONY: lint unittest e2e e2e-sqlite e2e-postgres e2e-mysql e2e-oidc-keycloak e2e-setup e2e-teardown test
+.PHONY: lint unittest e2e e2e-sqlite e2e-postgres e2e-mysql e2e-oidc-keycloak e2e-oidc-zitadel e2e-setup e2e-teardown test
 
 CHARTS := $(wildcard charts/*)
 
@@ -38,11 +38,15 @@ e2e-mysql: e2e-setup
 e2e-oidc-keycloak: e2e-setup
 	ci/scripts/e2e-oidc.sh keycloak
 
+e2e-oidc-zitadel: e2e-setup
+	ci/scripts/e2e-oidc.sh zitadel
+
 e2e: e2e-setup
 	ci/scripts/e2e.sh sqlite
 	ci/scripts/e2e.sh postgres
 	ci/scripts/e2e.sh mysql
 	ci/scripts/e2e-oidc.sh keycloak
+	ci/scripts/e2e-oidc.sh zitadel
 
 e2e-teardown:
 	kind delete cluster --name $(E2E_CLUSTER) 2>/dev/null || true

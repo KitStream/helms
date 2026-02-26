@@ -30,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `dashboard.config.authAuthority` is empty.
 - E2E test with Keycloak deployed in-cluster: verifies OIDC middleware,
   token acquisition via direct grant, and authenticated API access.
+- E2E test with Zitadel + PostgreSQL deployed in-cluster: bootstraps
+  project/apps/service user via Management API, verifies OIDC middleware,
+  OIDC discovery, and client_credentials token acquisition.
 - Unit tests for OIDC config rendering, secret injection, provider
   credentials key mapping, and dashboard fallback (190 tests total).
 
