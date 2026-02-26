@@ -84,27 +84,27 @@ database:
 # deployment. This enables immediate API access without manual token creation.
 #
 # Prerequisites:
-#   1. Generate a PAT and its hash (see README for instructions)
-#   2. Create a Kubernetes Secret with both values:
+#   1. Generate a PAT token (see README for instructions)
+#   2. Create a Kubernetes Secret with the token:
 #
 #      kubectl create secret generic netbird-pat \
 #        --from-literal=token='nbp_...' \
-#        --from-literal=hashedToken='base64hash...' \
 #        -n netbird
+#
+# The SHA256 hash required by the database is computed automatically at
+# seed time by Initium (v1.0.4+) — you only need to supply the plaintext token.
 # =============================================================================
 pat:
   # -- Enable PAT seeding. When true, a post-install Job inserts a
   # Personal Access Token into the database.
   enabled: false
 
-  # -- Kubernetes Secret containing the PAT credentials.
+  # -- Kubernetes Secret containing the PAT token.
   secret:
-    # -- Name of the existing Secret with token and hashed token.
+    # -- Name of the existing Secret holding the plaintext PAT.
     secretName: ""
     # -- Key in the Secret holding the plaintext PAT (e.g. "nbp_...").
     tokenKey: "token"
-    # -- Key in the Secret holding the base64-encoded SHA256 hash.
-    hashedTokenKey: "hashedToken"
 
   # -- Display name for the seeded PAT.
   name: "helm-seeded-token"

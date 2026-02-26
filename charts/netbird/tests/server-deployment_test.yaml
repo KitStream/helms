@@ -399,21 +399,21 @@ tests:
             - --spec
             - /spec/pat-seed.yaml
 
-  - it: should inject PAT_HASHED_TOKEN into sidecar
+  - it: should inject PAT_TOKEN into sidecar
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
-      pat.secret.hashedTokenKey: myHash
+      pat.secret.tokenKey: myToken
       database.type: sqlite
     asserts:
       - contains:
           path: spec.template.spec.initContainers[1].env
           content:
-            name: PAT_HASHED_TOKEN
+            name: PAT_TOKEN
             valueFrom:
               secretKeyRef:
                 name: my-pat-secret
-                key: myHash
+                key: myToken
 
   - it: should run sidecar as root for SQLite PVC access
     set:

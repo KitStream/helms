@@ -169,14 +169,14 @@ creation — useful for automation, CI/CD, and GitOps workflows.
 ### Generating a PAT
 
 NetBird PATs have the format `nbp_<30-char-secret><6-char-checksum>` (40
-chars total). The database stores a base64-encoded SHA256 hash.
-
-Generate a token and its hash:
+chars total). The SHA256 hash required by the database is computed
+automatically by the seed process (Initium v1.0.4+) — you only need to
+generate the plaintext token.
 
 ```bash
 # Using Python
 python3 -c "
-import hashlib, base64, secrets, zlib
+import secrets, zlib
 secret = secrets.token_urlsafe(22)[:30]
 checksum = zlib.crc32(secret.encode()) & 0xffffffff
 chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
@@ -184,16 +184,12 @@ cs = ''
 v = checksum
 while v > 0: cs = chars[v % 62] + cs; v //= 62
 token = 'nbp_' + secret + cs.rjust(6, '0')
-hashed = base64.b64encode(hashlib.sha256(token.encode()).digest()).decode()
-print(f'Token:  {token}')
-print(f'Hash:   {hashed}')
+print(f'Token: {token}')
 "
 
-# Or using openssl
+# Or using openssl (simplified checksum)
 TOKEN="nbp_$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c30)000000"
-HASH=$(printf '%s' "$TOKEN" | openssl dgst -sha256 -binary | openssl base64 -A)
 echo "Token: $TOKEN"
-echo "Hash:  $HASH"
 ```
 
 ### Creating the Secret
@@ -201,7 +197,6 @@ echo "Hash:  $HASH"
 ```bash
 kubectl create secret generic netbird-pat \
   --from-literal=token='nbp_...' \
-  --from-literal=hashedToken='base64hash...' \
   -n netbird
 ```
 
@@ -273,9 +268,8 @@ curl -H "Authorization: Token nbp_..." https://netbird.example.com/api/groups
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `pat.enabled` | bool | `false` | Enable PAT seeding via post-install Job |
-| `pat.secret.secretName` | string | `""` | Kubernetes Secret containing token and hash |
+| `pat.secret.secretName` | string | `""` | Kubernetes Secret containing the plaintext PAT |
 | `pat.secret.tokenKey` | string | `"token"` | Key in Secret for the plaintext PAT |
-| `pat.secret.hashedTokenKey` | string | `"hashedToken"` | Key in Secret for the base64-encoded SHA256 hash |
 | `pat.name` | string | `"helm-seeded-token"` | Display name for the PAT |
 | `pat.userId` | string | `"helm-seed-user"` | User ID for the service user |
 | `pat.accountId` | string | `"helm-seed-account"` | Account ID for the service user |

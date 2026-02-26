@@ -145,14 +145,14 @@ tests:
           path: data["pat-seed.yaml"]
           pattern: "name: accounts"
 
-  - it: should use PAT_HASHED_TOKEN MiniJinja placeholder
+  - it: should compute hashed_token from PAT_TOKEN via sha256 and base64_encode
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
     asserts:
       - matchRegex:
           path: data["pat-seed.yaml"]
-          pattern: "env\\.PAT_HASHED_TOKEN"
+          pattern: 'env\.PAT_TOKEN \| sha256\("bytes"\) \| base64_encode'
 
   - it: should seed account user and pat tables
     set:

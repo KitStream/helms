@@ -162,8 +162,8 @@ EOF
 # NetBird PAT format: nbp_ (4) + secret (30) + base62(CRC32(secret)) (6) = 40 chars
 generate_pat_secret() {
   log "Generating PAT secret for testing..."
-  read -r PAT_TOKEN PAT_HASH < <(python3 -c "
-import hashlib, base64, binascii
+  PAT_TOKEN=$(python3 -c "
+import binascii
 
 BASE62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 def base62_encode(num, length=6):
@@ -176,14 +176,11 @@ def base62_encode(num, length=6):
 secret = 'TestSecretValue1234567890ABCDE'   # exactly 30 chars
 crc = binascii.crc32(secret.encode()) & 0xFFFFFFFF
 token = 'nbp_' + secret + base62_encode(crc)
-h = base64.b64encode(hashlib.sha256(token.encode()).digest()).decode()
-print(token, h)
+print(token)
 ")
   log "Test PAT token: $PAT_TOKEN (length=${#PAT_TOKEN})"
-  log "Test PAT hash:  $PAT_HASH"
   kubectl -n "$NAMESPACE" create secret generic netbird-pat \
-    --from-literal=token="$PAT_TOKEN" \
-    --from-literal=hashedToken="$PAT_HASH"
+    --from-literal=token="$PAT_TOKEN"
 }
 case "$BACKEND" in
   sqlite)
