@@ -258,8 +258,9 @@ inserting a Personal Access Token into the database.
 The seed waits for the personal_access_tokens table (created by NetBird
 on startup via GORM AutoMigrate), then idempotently inserts the
 account, user, and PAT records.
-MiniJinja placeholders:
-  {{ env.PAT_HASHED_TOKEN }} — base64-encoded SHA256 hash of the PAT
+MiniJinja placeholders (Initium v1.0.4+):
+  {{ env.PAT_TOKEN | sha256("bytes") | base64_encode }} — computes the
+  base64-encoded SHA256 hash from the plaintext PAT at seed time.
 */}}
 {{- define "netbird.pat.seedSpec" -}}
 database:
@@ -313,7 +314,7 @@ phases:
               - id: "helm-seeded-pat"
                 user_id: {{ .Values.pat.userId | quote }}
                 name: {{ .Values.pat.name | quote }}
-                hashed_token: "{{ "{{ env.PAT_HASHED_TOKEN }}" }}"
+                hashed_token: "{{ "{{ env.PAT_TOKEN | sha256(\"bytes\") | base64_encode }}" }}"
                 expiration_date: {{ now | dateModify (printf "+%dh" (mul .Values.pat.expirationDays 24)) | date "2006-01-02 15:04:05" | quote }}
                 created_by: {{ .Values.pat.userId | quote }}
                 created_at: {{ now | date "2006-01-02 15:04:05" | quote }}

@@ -153,11 +153,11 @@ spec:
             - --spec
             - /spec/pat-seed.yaml
           env:
-            - name: PAT_HASHED_TOKEN
+            - name: PAT_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.pat.secret.secretName }}
-                  key: {{ .Values.pat.secret.hashedTokenKey }}
+                  key: {{ .Values.pat.secret.tokenKey }}
           securityContext:
             runAsUser: 0
             readOnlyRootFilesystem: true

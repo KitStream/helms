@@ -161,11 +161,11 @@ tests:
           path: spec.template.spec.containers[0].image
           value: "ghcr.io/kitstream/initium:1.0.4"
 
-  - it: should inject PAT_HASHED_TOKEN env var from secret
+  - it: should inject PAT_TOKEN env var from secret
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
-      pat.secret.hashedTokenKey: myHashKey
+      pat.secret.tokenKey: myTokenKey
       database.type: postgresql
       database.host: pg.example.com
       database.user: netbird
@@ -175,11 +175,11 @@ tests:
       - contains:
           path: spec.template.spec.containers[0].env
           content:
-            name: PAT_HASHED_TOKEN
+            name: PAT_TOKEN
             valueFrom:
               secretKeyRef:
                 name: my-pat-secret
-                key: myHashKey
+                key: myTokenKey
 
   - it: should inject DB_PASSWORD for postgresql
     set:

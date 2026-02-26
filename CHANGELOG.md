@@ -35,6 +35,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Breaking:** Removed `pat.secret.hashedTokenKey` from PAT configuration. The
+  SHA256 hash is now computed automatically at seed time by Initium v1.0.4 using
+  MiniJinja's `sha256` and `base64encode` filters. Users only need to supply the
+  plaintext PAT token in their Kubernetes Secret.
+  **Migration:** Remove the `hashedToken` key from your PAT Secret and the
+  `pat.secret.hashedTokenKey` from your values. Only `pat.secret.tokenKey` (default: `"token"`) is needed.
 - **Breaking:** Replaced raw DSN secret (`server.secrets.storeDsn`) with structured
   `database.*` configuration. The chart now constructs the DSN internally from
   `database.type`, `database.host`, `database.port`, `database.user`, `database.name`,
