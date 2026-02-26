@@ -2,7 +2,7 @@ apiVersion: v2
 name: netbird
 description: A Helm chart for deploying NetBird VPN management, signal, dashboard, and relay services on Kubernetes
 type: application
-version: 0.1.0
+version: 0.1.1
 appVersion: "0.65.3"
 keywords:
   - netbird
@@ -30,6 +30,8 @@ annotations:
     - name: Initium
       url: https://github.com/KitStream/initium
   artifacthub.io/changes: |
+    - kind: added
+      description: OIDC/SSO configuration with Keycloak, Auth0, Azure, Zitadel support
     - kind: added
       description: PAT seeding with automatic SHA256 hash computation
     - kind: added

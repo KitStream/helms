@@ -11,7 +11,7 @@ Production-ready Helm charts for self-hosted infrastructure, maintained by [KitS
 
 | Chart                      | Description                                                                                   | Version |
 |----------------------------|-----------------------------------------------------------------------------------------------|---------|
-| [netbird](charts/netbird/) | Deploy [NetBird](https://netbird.io) VPN (management, signal, dashboard, relay) on Kubernetes | `0.1.0` |
+| [netbird](charts/netbird/) | Deploy [NetBird](https://netbird.io) VPN (management, signal, dashboard, relay) on Kubernetes | `0.1.1` |
 
 ## Quick Start
 
@@ -19,7 +19,7 @@ Production-ready Helm charts for self-hosted infrastructure, maintained by [KitS
 
 ```bash
 helm install netbird oci://ghcr.io/kitstream/helms/netbird \
-  --version 0.1.0 \
+  --version 0.1.1 \
   -n netbird --create-namespace \
   -f my-values.yaml
 ```

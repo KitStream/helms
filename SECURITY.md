@@ -4,7 +4,7 @@
 
 | Chart   | Version | Supported |
 |---------|---------|-----------|
-| netbird | 0.1.x   | Yes       |
+| netbird | 0.1.x | Yes |
 
 ## Reporting a Vulnerability
 

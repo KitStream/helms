@@ -1,7 +1,7 @@
 # NetBird Helm Chart
 
 [![CI](https://github.com/KitStream/helms/actions/workflows/ci.yaml/badge.svg)](https://github.com/KitStream/helms/actions/workflows/ci.yaml)
-[![Chart Version](https://img.shields.io/badge/chart-0.1.0-blue)](https://github.com/KitStream/helms/releases)
+[![Chart Version](https://img.shields.io/badge/chart-0.1.1-blue)](https://github.com/KitStream/helms/releases)
 [![App Version](https://img.shields.io/badge/netbird-0.65.3-green)](https://github.com/netbirdio/netbird)
 
 A Helm chart for deploying [NetBird](https://netbird.io) VPN management, signal, dashboard, and relay services on Kubernetes.
@@ -35,7 +35,7 @@ For external databases (PostgreSQL, MySQL), the chart automatically:
 
 ```bash
 helm install netbird oci://ghcr.io/kitstream/helms/netbird \
-  --version 0.1.0 \
+  --version 0.1.1 \
   -n netbird --create-namespace \
   -f my-values.yaml
 ```
