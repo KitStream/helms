@@ -237,6 +237,152 @@ In both cases, the seed:
 curl -H "Authorization: Token nbp_..." https://netbird.example.com/api/groups
 ```
 
+## OIDC / SSO Configuration
+
+The chart supports structured OIDC configuration for integrating with
+external identity providers. When `oidc.enabled: true`, the chart renders
+`http:`, `deviceAuthFlow:`, `pkceAuthFlow:`, and `idpConfig:` sections into
+the server config.yaml.
+
+### Keycloak Example
+
+```yaml
+server:
+  config:
+    auth:
+      issuer: "https://keycloak.example.com/realms/netbird"
+
+oidc:
+  enabled: true
+  audience: "netbird"
+  userIdClaim: "sub"
+  configEndpoint: "https://keycloak.example.com/realms/netbird/.well-known/openid-configuration"
+
+  deviceAuthFlow:
+    enabled: true
+    provider: "keycloak"
+    providerConfig:
+      clientId: "netbird-client"
+      domain: "keycloak.example.com"
+      tokenEndpoint: "https://keycloak.example.com/realms/netbird/protocol/openid-connect/token"
+      deviceAuthEndpoint: "https://keycloak.example.com/realms/netbird/protocol/openid-connect/auth/device"
+      scope: "openid profile email"
+
+  pkceAuthFlow:
+    enabled: true
+    providerConfig:
+      clientId: "netbird-dashboard"
+      authorizationEndpoint: "https://keycloak.example.com/realms/netbird/protocol/openid-connect/auth"
+      tokenEndpoint: "https://keycloak.example.com/realms/netbird/protocol/openid-connect/token"
+      scope: "openid profile email groups offline_access"
+      redirectUrls:
+        - "https://netbird.example.com/nb-auth"
+        - "https://netbird.example.com/nb-silent-auth"
+
+  idpManager:
+    enabled: true
+    managerType: "keycloak"
+    clientConfig:
+      issuer: "https://keycloak.example.com/realms/netbird"
+      tokenEndpoint: "https://keycloak.example.com/realms/netbird/protocol/openid-connect/token"
+      clientId: "netbird-backend"
+      clientSecret:
+        secretName: keycloak-client-secret
+        secretKey: clientSecret
+      grantType: "client_credentials"
+```
+
+### Auth0 Example
+
+```yaml
+oidc:
+  enabled: true
+  audience: "netbird-api"
+  deviceAuthFlow:
+    enabled: true
+    provider: "auth0"
+    providerConfig:
+      clientId: "<spa-client-id>"
+      domain: "<tenant>.auth0.com"
+      audience: "netbird-api"
+  idpManager:
+    enabled: true
+    managerType: "auth0"
+    clientConfig:
+      issuer: "https://<tenant>.auth0.com/"
+      tokenEndpoint: "https://<tenant>.auth0.com/oauth/token"
+      clientId: "<m2m-client-id>"
+      clientSecret:
+        secretName: auth0-client-secret
+        secretKey: clientSecret
+      grantType: "client_credentials"
+    providerConfig:
+      Audience: "https://<tenant>.auth0.com/api/v2/"
+      AuthIssuer: "https://<tenant>.auth0.com/"
+```
+
+### Azure Entra ID Example
+
+```yaml
+oidc:
+  enabled: true
+  audience: "api://<application-id>"
+  userIdClaim: "oid"
+  deviceAuthFlow:
+    enabled: true
+    provider: "azure"
+    providerConfig:
+      clientId: "<client-id>"
+      domain: "login.microsoftonline.com"
+      audience: "api://<application-id>"
+  idpManager:
+    enabled: true
+    managerType: "azure"
+    clientConfig:
+      issuer: "https://login.microsoftonline.com/<tenant-id>/v2.0"
+      tokenEndpoint: "https://login.microsoftonline.com/<tenant-id>/oauth2/v2.0/token"
+      clientId: "<client-id>"
+      clientSecret:
+        secretName: azure-client-secret
+        secretKey: clientSecret
+      grantType: "client_credentials"
+    providerConfig:
+      ObjectID: "<service-principal-object-id>"
+      GraphAPIEndpoint: "https://graph.microsoft.com"
+```
+
+### Secret Injection
+
+OIDC client secrets are injected via Kubernetes Secrets and never stored in
+ConfigMaps. Create a Secret for your IdP manager client:
+
+```bash
+kubectl create secret generic keycloak-client-secret \
+  --from-literal=clientSecret='your-client-secret' \
+  -n netbird
+```
+
+The chart injects the secret as an environment variable (`IDP_CLIENT_SECRET`
+or `PKCE_CLIENT_SECRET`) in the config-init container, and references it in
+the config template as `${IDP_CLIENT_SECRET}` / `${PKCE_CLIENT_SECRET}`.
+
+### Dashboard Auto-Derivation
+
+When `dashboard.config.authAuthority` is empty, the dashboard automatically
+uses `server.config.auth.issuer` as the OIDC authority. You should still set
+`dashboard.config.authClientId` and `dashboard.config.authAudience` explicitly.
+
+### Manual Testing for SaaS Providers
+
+Providers that cannot be deployed in-cluster (Azure Entra ID, Auth0, Okta,
+ADFS) can be tested manually:
+
+1. Configure the provider with appropriate app registrations
+2. Create Kubernetes Secrets with the client credentials
+3. Install the chart with provider-specific OIDC values
+4. Verify: `kubectl logs` shows the server connecting to the IdP,
+   `curl -H "Authorization: Bearer <token>" .../api/users` returns 200
+
 ## Values Reference
 
 ### Global
@@ -262,6 +408,50 @@ curl -H "Authorization: Token nbp_..." https://netbird.example.com/api/groups
 | `database.passwordSecret.secretName` | string | `""` | Secret containing the database password |
 | `database.passwordSecret.secretKey` | string | `"password"` | Key in the Secret |
 | `database.sslMode` | string | `"disable"` | SSL mode for PostgreSQL (ignored for mysql/sqlite) |
+
+### OIDC / SSO
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `oidc.enabled` | bool | `false` | Enable OIDC configuration |
+| `oidc.audience` | string | `""` | JWT audience claim (HttpServerConfig.AuthAudience) |
+| `oidc.userIdClaim` | string | `""` | JWT user ID claim (default: "sub") |
+| `oidc.configEndpoint` | string | `""` | OIDC discovery endpoint URL |
+| `oidc.authKeysLocation` | string | `""` | JWT keys location URL (JWKS) |
+| `oidc.deviceAuthFlow.enabled` | bool | `false` | Enable device authorization flow (CLI) |
+| `oidc.deviceAuthFlow.provider` | string | `"hosted"` | Device auth provider name |
+| `oidc.deviceAuthFlow.providerConfig.clientId` | string | `""` | Client ID for CLI app |
+| `oidc.deviceAuthFlow.providerConfig.clientSecret` | string | `""` | Client secret (usually empty for public) |
+| `oidc.deviceAuthFlow.providerConfig.domain` | string | `""` | Provider domain |
+| `oidc.deviceAuthFlow.providerConfig.audience` | string | `""` | Audience for token validation |
+| `oidc.deviceAuthFlow.providerConfig.tokenEndpoint` | string | `""` | Token endpoint override |
+| `oidc.deviceAuthFlow.providerConfig.deviceAuthEndpoint` | string | `""` | Device auth endpoint override |
+| `oidc.deviceAuthFlow.providerConfig.scope` | string | `"openid"` | OAuth2 scopes |
+| `oidc.deviceAuthFlow.providerConfig.useIdToken` | bool | `false` | Use ID token instead of access token |
+| `oidc.pkceAuthFlow.enabled` | bool | `false` | Enable PKCE authorization flow (dashboard) |
+| `oidc.pkceAuthFlow.providerConfig.clientId` | string | `""` | Client ID for dashboard app |
+| `oidc.pkceAuthFlow.providerConfig.clientSecret.value` | string | `""` | Plain-text client secret |
+| `oidc.pkceAuthFlow.providerConfig.clientSecret.secretName` | string | `""` | Secret name for client secret |
+| `oidc.pkceAuthFlow.providerConfig.clientSecret.secretKey` | string | `"clientSecret"` | Key in Secret |
+| `oidc.pkceAuthFlow.providerConfig.domain` | string | `""` | Provider domain |
+| `oidc.pkceAuthFlow.providerConfig.audience` | string | `""` | Audience |
+| `oidc.pkceAuthFlow.providerConfig.authorizationEndpoint` | string | `""` | Authorization endpoint override |
+| `oidc.pkceAuthFlow.providerConfig.tokenEndpoint` | string | `""` | Token endpoint override |
+| `oidc.pkceAuthFlow.providerConfig.scope` | string | `"openid profile email"` | OAuth2 scopes |
+| `oidc.pkceAuthFlow.providerConfig.redirectUrls` | list | `[]` | Allowed redirect URLs |
+| `oidc.pkceAuthFlow.providerConfig.useIdToken` | bool | `false` | Use ID token |
+| `oidc.pkceAuthFlow.providerConfig.disablePromptLogin` | bool | `false` | Disable login prompt |
+| `oidc.pkceAuthFlow.providerConfig.loginFlag` | int | `0` | Login flag value |
+| `oidc.idpManager.enabled` | bool | `false` | Enable IdP manager for user sync |
+| `oidc.idpManager.managerType` | string | `""` | Manager type (keycloak, auth0, azure, zitadel, okta, etc.) |
+| `oidc.idpManager.clientConfig.issuer` | string | `""` | OIDC issuer for management API |
+| `oidc.idpManager.clientConfig.tokenEndpoint` | string | `""` | Token endpoint |
+| `oidc.idpManager.clientConfig.clientId` | string | `""` | Client ID |
+| `oidc.idpManager.clientConfig.clientSecret.secretName` | string | `""` | Secret name for client secret |
+| `oidc.idpManager.clientConfig.clientSecret.secretKey` | string | `"clientSecret"` | Key in Secret |
+| `oidc.idpManager.clientConfig.grantType` | string | `"client_credentials"` | OAuth2 grant type |
+| `oidc.idpManager.extraConfig` | object | `{}` | Provider-specific extra config |
+| `oidc.idpManager.providerConfig` | object | `{}` | Provider-specific credentials |
 
 ### PAT (Personal Access Token)
 

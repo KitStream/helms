@@ -180,6 +180,32 @@ tests:
           content:
             sidecar.istio.io/inject: "false"
 
+  # ── AUTH_AUTHORITY fallback ───────────────────────────────────────────
+
+  - it: should use server auth issuer when dashboard authAuthority is empty
+    set:
+      dashboard.config.authAuthority: ""
+      server.config.auth.issuer: "https://auth.example.com"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: AUTH_AUTHORITY
+            value: "https://auth.example.com"
+
+  - it: should prefer explicit dashboard authAuthority over server issuer
+    set:
+      dashboard.config.authAuthority: "https://custom.auth.com"
+      server.config.auth.issuer: "https://auth.example.com"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: AUTH_AUTHORITY
+            value: "https://custom.auth.com"
+
+  # ── Other settings ─────────────────────────────────────────────────
+
   - it: should include liveness and readiness probes by default
     asserts:
       - equal:

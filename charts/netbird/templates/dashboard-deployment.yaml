@@ -59,7 +59,7 @@ spec:
               value: {{ .Values.dashboard.secrets.authClientSecret.value | quote }}
             {{- end }}
             - name: AUTH_AUTHORITY
-              value: {{ .Values.dashboard.config.authAuthority | quote }}
+              value: {{ (coalesce .Values.dashboard.config.authAuthority .Values.server.config.auth.issuer) | quote }}
             - name: USE_AUTH0
               value: {{ .Values.dashboard.config.useAuth0 | quote }}
             - name: AUTH_SUPPORTED_SCOPES

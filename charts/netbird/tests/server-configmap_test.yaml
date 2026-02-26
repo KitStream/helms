@@ -106,3 +106,231 @@ tests:
             app.kubernetes.io/name: netbird
             app.kubernetes.io/component: server
 
+  # ── OIDC configuration ────────────────────────────────────────────────
+
+  - it: should not render OIDC sections when oidc.enabled is false
+    asserts:
+      - notMatchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: "idpConfig:"
+      - notMatchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: "deviceAuthFlow:"
+      - notMatchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: "pkceAuthFlow:"
+
+  - it: should render http section when oidc is enabled
+    set:
+      oidc.enabled: true
+      oidc.audience: "my-api"
+      oidc.userIdClaim: "email"
+    asserts:
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: 'authAudience: "my-api"'
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: 'authUserIDClaim: "email"'
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: "idpSignKeyRefreshEnabled: true"
+
+  - it: should render oidcConfigEndpoint when set
+    set:
+      oidc.enabled: true
+      oidc.configEndpoint: "https://auth.example.com/.well-known/openid-configuration"
+    asserts:
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: 'oidcConfigEndpoint: "https://auth\.example\.com/\.well-known/openid-configuration"'
+
+  - it: should not render oidcConfigEndpoint when empty
+    set:
+      oidc.enabled: true
+    asserts:
+      - notMatchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: "oidcConfigEndpoint:"
+
+  - it: should render authKeysLocation when set
+    set:
+      oidc.enabled: true
+      oidc.authKeysLocation: "https://auth.example.com/.well-known/jwks.json"
+    asserts:
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: 'authKeysLocation: "https://auth\.example\.com/\.well-known/jwks\.json"'
+
+  - it: should render deviceAuthFlow when enabled
+    set:
+      oidc.enabled: true
+      oidc.deviceAuthFlow.enabled: true
+      oidc.deviceAuthFlow.provider: "keycloak"
+      oidc.deviceAuthFlow.providerConfig.clientId: "cli-client"
+      oidc.deviceAuthFlow.providerConfig.domain: "auth.example.com"
+      oidc.deviceAuthFlow.providerConfig.audience: "my-api"
+      oidc.deviceAuthFlow.providerConfig.tokenEndpoint: "https://auth.example.com/token"
+      oidc.deviceAuthFlow.providerConfig.deviceAuthEndpoint: "https://auth.example.com/device"
+    asserts:
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: 'provider: "keycloak"'
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: 'clientId: "cli-client"'
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: 'domain: "auth\.example\.com"'
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: 'audience: "my-api"'
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: 'tokenEndpoint: "https://auth\.example\.com/token"'
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: 'deviceAuthEndpoint: "https://auth\.example\.com/device"'
+
+  - it: should not render deviceAuthFlow when disabled
+    set:
+      oidc.enabled: true
+      oidc.deviceAuthFlow.enabled: false
+    asserts:
+      - notMatchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: "deviceAuthFlow:"
+
+  - it: should render pkceAuthFlow with plain-text client secret
+    set:
+      oidc.enabled: true
+      oidc.pkceAuthFlow.enabled: true
+      oidc.pkceAuthFlow.providerConfig.clientId: "dashboard"
+      oidc.pkceAuthFlow.providerConfig.clientSecret.value: "my-plain-secret"
+    asserts:
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: "pkceAuthFlow:"
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: 'clientSecret: "my-plain-secret"'
+
+  - it: should render pkceAuthFlow with secret ref placeholder
+    set:
+      oidc.enabled: true
+      oidc.pkceAuthFlow.enabled: true
+      oidc.pkceAuthFlow.providerConfig.clientId: "dashboard"
+      oidc.pkceAuthFlow.providerConfig.clientSecret.secretName: my-pkce-secret
+    asserts:
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: 'clientSecret: "\$\{PKCE_CLIENT_SECRET\}"'
+
+  - it: should render pkceAuthFlow redirectURLs
+    set:
+      oidc.enabled: true
+      oidc.pkceAuthFlow.enabled: true
+      oidc.pkceAuthFlow.providerConfig.clientId: "dashboard"
+      oidc.pkceAuthFlow.providerConfig.redirectUrls:
+        - "https://netbird.example.com/nb-auth"
+        - "https://netbird.example.com/nb-silent-auth"
+    asserts:
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: "redirectURLs:"
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: '"https://netbird\.example\.com/nb-auth"'
+
+  - it: should render idpConfig with keycloak provider credentials key
+    set:
+      oidc.enabled: true
+      oidc.idpManager.enabled: true
+      oidc.idpManager.managerType: "keycloak"
+      oidc.idpManager.clientConfig.issuer: "https://kc.example.com/realms/nb"
+      oidc.idpManager.clientConfig.tokenEndpoint: "https://kc.example.com/realms/nb/protocol/openid-connect/token"
+      oidc.idpManager.clientConfig.clientId: "backend"
+      oidc.idpManager.clientConfig.clientSecret.secretName: my-kc-secret
+      oidc.idpManager.providerConfig:
+        adminEndpoint: "https://kc.example.com/admin/realms/nb"
+    asserts:
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: 'managerType: "keycloak"'
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: 'clientSecret: "\$\{IDP_CLIENT_SECRET\}"'
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: "keycloakClientCredentials:"
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: "adminEndpoint:"
+
+  - it: should render auth0ClientCredentials for auth0 manager type
+    set:
+      oidc.enabled: true
+      oidc.idpManager.enabled: true
+      oidc.idpManager.managerType: "auth0"
+      oidc.idpManager.clientConfig.issuer: "https://tenant.auth0.com/"
+      oidc.idpManager.clientConfig.tokenEndpoint: "https://tenant.auth0.com/oauth/token"
+      oidc.idpManager.clientConfig.clientId: "m2m-client"
+      oidc.idpManager.clientConfig.clientSecret.secretName: my-auth0-secret
+      oidc.idpManager.providerConfig:
+        Audience: "https://tenant.auth0.com/api/v2/"
+    asserts:
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: "auth0ClientCredentials:"
+      - notMatchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: "keycloakClientCredentials:"
+
+  - it: should render azureClientCredentials for azure manager type
+    set:
+      oidc.enabled: true
+      oidc.idpManager.enabled: true
+      oidc.idpManager.managerType: "azure"
+      oidc.idpManager.clientConfig.issuer: "https://login.microsoftonline.com/tenant/v2.0"
+      oidc.idpManager.clientConfig.tokenEndpoint: "https://login.microsoftonline.com/tenant/oauth2/v2.0/token"
+      oidc.idpManager.clientConfig.clientId: "client-id"
+      oidc.idpManager.clientConfig.clientSecret.secretName: my-azure-secret
+      oidc.idpManager.providerConfig:
+        ObjectID: "service-principal-oid"
+        GraphAPIEndpoint: "https://graph.microsoft.com"
+    asserts:
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: "azureClientCredentials:"
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: "ObjectID: service-principal-oid"
+
+  - it: should render idpManager extraConfig
+    set:
+      oidc.enabled: true
+      oidc.idpManager.enabled: true
+      oidc.idpManager.managerType: "keycloak"
+      oidc.idpManager.clientConfig.issuer: "https://kc.example.com"
+      oidc.idpManager.clientConfig.tokenEndpoint: "https://kc.example.com/token"
+      oidc.idpManager.clientConfig.clientId: "backend"
+      oidc.idpManager.clientConfig.clientSecret.secretName: my-secret
+      oidc.idpManager.extraConfig:
+        customKey: "customValue"
+    asserts:
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: "extraConfig:"
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: "customKey: customValue"
+
+  - it: should escape dollar signs in OIDC values
+    set:
+      oidc.enabled: true
+      oidc.audience: "my$api"
+    asserts:
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: 'authAudience: "my\$\{DOLLAR\}api"'
+
