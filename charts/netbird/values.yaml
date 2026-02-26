@@ -77,6 +77,133 @@ database:
   sslMode: "disable"
 
 # =============================================================================
+# OIDC / SSO Configuration
+# =============================================================================
+# Structured OIDC configuration for integrating with external identity
+# providers. When oidc.enabled is true, the chart renders HttpServerConfig,
+# DeviceAuthorizationFlow, PKCEAuthorizationFlow, and IdpManagerConfig
+# sections into the server config.yaml.
+#
+# Supported providers: keycloak, auth0, azure, zitadel, okta, authentik,
+# google, jumpcloud, dex, embedded.
+#
+# Secret values (IdP client secret, PKCE client secret) are injected via
+# Kubernetes Secrets using the existing Initium render pipeline — they never
+# appear in ConfigMaps.
+# =============================================================================
+oidc:
+  # -- Enable OIDC configuration. When true, the chart renders IdP manager,
+  # device auth flow, and PKCE flow settings into the server config.
+  enabled: false
+
+  # -- The audience claim expected in JWT tokens (HttpServerConfig.AuthAudience).
+  # Often the OIDC client ID or a custom API identifier.
+  audience: ""
+
+  # -- The JWT claim used to identify the user (HttpServerConfig.AuthUserIDClaim).
+  # Common values: "sub" (default), "email", "oid" (Azure).
+  userIdClaim: ""
+
+  # -- OIDC configuration endpoint for auto-discovery
+  # (HttpServerConfig.OIDCConfigEndpoint).
+  # Usually "https://<issuer>/.well-known/openid-configuration".
+  # Leave empty to let NetBird derive from auth.issuer.
+  configEndpoint: ""
+
+  # -- JWT keys location URL (HttpServerConfig.AuthKeysLocation).
+  # If empty, NetBird auto-discovers from the OIDC config endpoint.
+  authKeysLocation: ""
+
+  # ── Device Authorization Flow (RFC 8628) — CLI clients ──────────────
+  deviceAuthFlow:
+    # -- Enable device authorization flow for CLI authentication.
+    enabled: false
+    # -- Provider name (e.g. "hosted", "none", "auth0", "azure").
+    provider: "hosted"
+    providerConfig:
+      # -- OIDC client ID for the CLI/device application.
+      clientId: ""
+      # -- Client secret (usually empty for public clients).
+      clientSecret: ""
+      # -- Domain of the OIDC provider (e.g. "your-tenant.auth0.com").
+      domain: ""
+      # -- Audience for token validation.
+      audience: ""
+      # -- Override token endpoint (auto-discovered if empty).
+      tokenEndpoint: ""
+      # -- Override device authorization endpoint.
+      deviceAuthEndpoint: ""
+      # -- OAuth2 scopes to request.
+      scope: "openid"
+      # -- Use the ID token instead of the access token.
+      useIdToken: false
+
+  # ── PKCE Authorization Flow (RFC 7636) — dashboard/app clients ──────
+  pkceAuthFlow:
+    # -- Enable PKCE authorization flow for dashboard authentication.
+    enabled: false
+    providerConfig:
+      # -- OIDC client ID for the dashboard application.
+      clientId: ""
+      # -- Client secret. If secretName is set, the value is injected via
+      # secretKeyRef env var; otherwise the plain-text value is used.
+      clientSecret:
+        # -- Plain-text client secret (for public clients, leave empty).
+        value: ""
+        # -- Name of an existing Kubernetes Secret containing the client secret.
+        secretName: ""
+        # -- Key within the Secret.
+        secretKey: "clientSecret"
+      # -- Domain of the OIDC provider.
+      domain: ""
+      # -- Audience for token validation.
+      audience: ""
+      # -- Override authorization endpoint.
+      authorizationEndpoint: ""
+      # -- Override token endpoint.
+      tokenEndpoint: ""
+      # -- OAuth2 scopes to request.
+      scope: "openid profile email"
+      # -- Allowed redirect URLs for the PKCE flow.
+      redirectUrls: []
+      # -- Use the ID token instead of the access token.
+      useIdToken: false
+      # -- Disable the login prompt even if the user has an active session.
+      disablePromptLogin: false
+      # -- Login flag value (0 = default, see NetBird docs).
+      loginFlag: 0
+
+  # ── IdP Manager — server-side user/group management ─────────────────
+  idpManager:
+    # -- Enable IdP manager for server-side user sync.
+    enabled: false
+    # -- Manager type: "keycloak", "auth0", "azure", "zitadel", "okta",
+    #    "authentik", "google", "jumpcloud", "dex", "embedded".
+    managerType: ""
+    clientConfig:
+      # -- OIDC issuer URL (often same as server.config.auth.issuer).
+      issuer: ""
+      # -- Token endpoint for management API access.
+      tokenEndpoint: ""
+      # -- Client ID for the management API application.
+      clientId: ""
+      # -- Kubernetes Secret containing the management API client secret.
+      clientSecret:
+        # -- Name of the Secret.
+        secretName: ""
+        # -- Key within the Secret.
+        secretKey: "clientSecret"
+      # -- OAuth2 grant type (usually "client_credentials").
+      grantType: "client_credentials"
+    # -- Provider-specific extra configuration (key-value map).
+    # Passed as-is to the IdP manager. Keys depend on managerType.
+    extraConfig: {}
+    # -- Provider-specific credentials map. Rendered under the matching
+    # YAML key based on managerType (e.g. auth0ClientCredentials,
+    # azureClientCredentials, keycloakClientCredentials, etc.).
+    providerConfig: {}
+
+# =============================================================================
 # =============================================================================
 # PAT (Personal Access Token) Seeding
 # =============================================================================

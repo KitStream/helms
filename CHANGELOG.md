@@ -9,17 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- **OCI registry publishing**: Charts are published to `oci://ghcr.io/kitstream/helms`
-  on tagged releases via GitHub Actions. Install with
-  `helm install netbird oci://ghcr.io/kitstream/helms/netbird --version <version>`.
-- **GitHub Releases**: Tagged releases automatically create GitHub Releases with
-  packaged chart artifacts and auto-generated release notes.
-- **ArtifactHub metadata**: Chart.yaml includes ArtifactHub annotations for
-  discoverability on [artifacthub.io](https://artifacthub.io).
-- **SECURITY.md**: Security policy with vulnerability reporting instructions and
-  a summary of the project's security practices.
-- **README badges**: CI status, release status, license, and ArtifactHub badges
-  on both the repository and chart READMEs.
+- **OIDC/SSO configuration**: New `oidc.*` values for structured OIDC/SSO
+  configuration. When `oidc.enabled: true`, the chart renders `http:`,
+  `deviceAuthFlow:`, `pkceAuthFlow:`, and `idpConfig:` sections in the
+  server config.yaml. Supports all NetBird-supported IdP managers: keycloak,
+  auth0, azure, zitadel, okta, authentik, google, jumpcloud, dex, embedded.
+- `oidc.audience`, `oidc.userIdClaim`, `oidc.configEndpoint`,
+  `oidc.authKeysLocation` for HttpServerConfig fields.
+- `oidc.deviceAuthFlow.*` for Device Authorization Flow (RFC 8628) — CLI
+  clients.
+- `oidc.pkceAuthFlow.*` for PKCE Authorization Flow (RFC 7636) — dashboard
+  and web app clients. Supports both plain-text and secret-ref client secrets.
+- `oidc.idpManager.*` for IdP Manager configuration (server-side user/group
+  sync). Provider-specific credentials rendered under the correct YAML key
+  based on `oidc.idpManager.managerType` (e.g. `keycloakClientCredentials`,
+  `auth0ClientCredentials`, `azureClientCredentials`).
+- OIDC secret values (`IDP_CLIENT_SECRET`, `PKCE_CLIENT_SECRET`) injected
+  via Kubernetes Secrets using the existing Initium render pipeline.
+- Dashboard `AUTH_AUTHORITY` falls back to `server.config.auth.issuer` when
+  `dashboard.config.authAuthority` is empty.
+- E2E test with Keycloak deployed in-cluster: verifies OIDC middleware,
+  token acquisition via direct grant, and authenticated API access.
+- E2E test with Zitadel + PostgreSQL deployed in-cluster: bootstraps
+  project/apps/service user via Management API, verifies OIDC middleware,
+  OIDC discovery, and client_credentials token acquisition.
+- Unit tests for OIDC config rendering, secret injection, provider
+  credentials key mapping, and dashboard fallback (190 tests total).
 
 - **PAT seeding**: Optional Personal Access Token seeding via `pat.*` values.
   When `pat.enabled: true`, a service user account and PAT are seeded into

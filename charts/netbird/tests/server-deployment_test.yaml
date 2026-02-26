@@ -533,6 +533,82 @@ tests:
       - notExists:
           path: spec.template.metadata.annotations.checksum/pat-seed
 
+  # ── OIDC secret injection ────────────────────────────────────────────
+
+  - it: should not inject IDP_CLIENT_SECRET when oidc is disabled
+    asserts:
+      - notContains:
+          path: spec.template.spec.initContainers[0].env
+          content:
+            name: IDP_CLIENT_SECRET
+          any: true
+
+  - it: should not inject PKCE_CLIENT_SECRET when oidc is disabled
+    asserts:
+      - notContains:
+          path: spec.template.spec.initContainers[0].env
+          content:
+            name: PKCE_CLIENT_SECRET
+          any: true
+
+  - it: should inject IDP_CLIENT_SECRET when idpManager is enabled
+    set:
+      oidc.enabled: true
+      oidc.idpManager.enabled: true
+      oidc.idpManager.managerType: "keycloak"
+      oidc.idpManager.clientConfig.clientSecret.secretName: my-idp-secret
+      oidc.idpManager.clientConfig.clientSecret.secretKey: myKey
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[0].env
+          content:
+            name: IDP_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: my-idp-secret
+                key: myKey
+
+  - it: should inject PKCE_CLIENT_SECRET when pkceAuthFlow uses secret ref
+    set:
+      oidc.enabled: true
+      oidc.pkceAuthFlow.enabled: true
+      oidc.pkceAuthFlow.providerConfig.clientSecret.secretName: my-pkce-secret
+      oidc.pkceAuthFlow.providerConfig.clientSecret.secretKey: pkceKey
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[0].env
+          content:
+            name: PKCE_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: my-pkce-secret
+                key: pkceKey
+
+  - it: should not inject PKCE_CLIENT_SECRET when using plain-text secret
+    set:
+      oidc.enabled: true
+      oidc.pkceAuthFlow.enabled: true
+      oidc.pkceAuthFlow.providerConfig.clientSecret.value: "plain-secret"
+    asserts:
+      - notContains:
+          path: spec.template.spec.initContainers[0].env
+          content:
+            name: PKCE_CLIENT_SECRET
+          any: true
+
+  - it: should not change init container count when oidc is enabled with sqlite
+    set:
+      oidc.enabled: true
+      oidc.idpManager.enabled: true
+      oidc.idpManager.clientConfig.clientSecret.secretName: my-secret
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.initContainers
+          count: 1
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: config-init
+
   # ── Other deployment settings ────────────────────────────────────────
 
   - it: should set resource limits when specified

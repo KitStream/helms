@@ -155,6 +155,26 @@ netbird.database.isExternal — true when database.type is not sqlite.
 {{- ne .Values.database.type "sqlite" -}}
 {{- end }}
 
+{{/* ===== OIDC helpers ===== */}}
+
+{{/*
+netbird.oidc.providerCredentialsKey — maps idpManager.managerType to the
+corresponding YAML key for provider-specific credentials in config.yaml.
+  auth0    -> auth0ClientCredentials
+  azure    -> azureClientCredentials
+  keycloak -> keycloakClientCredentials
+  zitadel  -> zitadelClientCredentials
+  (other)  -> <type>ClientCredentials
+*/}}
+{{- define "netbird.oidc.providerCredentialsKey" -}}
+{{- if eq . "auth0" -}}auth0ClientCredentials
+{{- else if eq . "azure" -}}azureClientCredentials
+{{- else if eq . "keycloak" -}}keycloakClientCredentials
+{{- else if eq . "zitadel" -}}zitadelClientCredentials
+{{- else -}}{{ . }}ClientCredentials
+{{- end -}}
+{{- end }}
+
 {{/*
 netbird.database.dsn — constructs the DSN string with ${DB_PASSWORD} placeholder.
   postgresql: host=H user=U password=${DB_PASSWORD} dbname=D port=P sslmode=S
@@ -213,6 +233,97 @@ server:
     engine: {{ include "netbird.database.engine" . | quote }}
     dsn: {{ if eq (include "netbird.database.isExternal" .) "true" }}"{{ include "netbird.database.dsn" . }}"{{ else }}""{{ end }}
     encryptionKey: "${ENCRYPTION_KEY}"
+{{- if .Values.oidc.enabled }}
+
+  http:
+    authAudience: {{ include "netbird.escapeEnvsubst" .Values.oidc.audience | quote }}
+    {{- with .Values.oidc.userIdClaim }}
+    authUserIDClaim: {{ include "netbird.escapeEnvsubst" . | quote }}
+    {{- end }}
+    {{- with .Values.oidc.configEndpoint }}
+    oidcConfigEndpoint: {{ include "netbird.escapeEnvsubst" . | quote }}
+    {{- end }}
+    {{- with .Values.oidc.authKeysLocation }}
+    authKeysLocation: {{ include "netbird.escapeEnvsubst" . | quote }}
+    {{- end }}
+    idpSignKeyRefreshEnabled: {{ .Values.server.config.auth.signKeyRefreshEnabled }}
+{{- if .Values.oidc.deviceAuthFlow.enabled }}
+
+  deviceAuthFlow:
+    provider: {{ include "netbird.escapeEnvsubst" .Values.oidc.deviceAuthFlow.provider | quote }}
+    providerConfig:
+      {{- with .Values.oidc.deviceAuthFlow.providerConfig.audience }}
+      audience: {{ include "netbird.escapeEnvsubst" . | quote }}
+      {{- end }}
+      clientId: {{ include "netbird.escapeEnvsubst" .Values.oidc.deviceAuthFlow.providerConfig.clientId | quote }}
+      {{- with .Values.oidc.deviceAuthFlow.providerConfig.clientSecret }}
+      clientSecret: {{ include "netbird.escapeEnvsubst" . | quote }}
+      {{- end }}
+      {{- with .Values.oidc.deviceAuthFlow.providerConfig.domain }}
+      domain: {{ include "netbird.escapeEnvsubst" . | quote }}
+      {{- end }}
+      {{- with .Values.oidc.deviceAuthFlow.providerConfig.tokenEndpoint }}
+      tokenEndpoint: {{ include "netbird.escapeEnvsubst" . | quote }}
+      {{- end }}
+      {{- with .Values.oidc.deviceAuthFlow.providerConfig.deviceAuthEndpoint }}
+      deviceAuthEndpoint: {{ include "netbird.escapeEnvsubst" . | quote }}
+      {{- end }}
+      scope: {{ include "netbird.escapeEnvsubst" .Values.oidc.deviceAuthFlow.providerConfig.scope | quote }}
+      useIdToken: {{ .Values.oidc.deviceAuthFlow.providerConfig.useIdToken }}
+{{- end }}
+{{- if .Values.oidc.pkceAuthFlow.enabled }}
+
+  pkceAuthFlow:
+    providerConfig:
+      {{- with .Values.oidc.pkceAuthFlow.providerConfig.audience }}
+      audience: {{ include "netbird.escapeEnvsubst" . | quote }}
+      {{- end }}
+      clientId: {{ include "netbird.escapeEnvsubst" .Values.oidc.pkceAuthFlow.providerConfig.clientId | quote }}
+      {{- if .Values.oidc.pkceAuthFlow.providerConfig.clientSecret.secretName }}
+      clientSecret: "${PKCE_CLIENT_SECRET}"
+      {{- else }}
+      clientSecret: {{ include "netbird.escapeEnvsubst" .Values.oidc.pkceAuthFlow.providerConfig.clientSecret.value | quote }}
+      {{- end }}
+      {{- with .Values.oidc.pkceAuthFlow.providerConfig.domain }}
+      domain: {{ include "netbird.escapeEnvsubst" . | quote }}
+      {{- end }}
+      {{- with .Values.oidc.pkceAuthFlow.providerConfig.authorizationEndpoint }}
+      authorizationEndpoint: {{ include "netbird.escapeEnvsubst" . | quote }}
+      {{- end }}
+      {{- with .Values.oidc.pkceAuthFlow.providerConfig.tokenEndpoint }}
+      tokenEndpoint: {{ include "netbird.escapeEnvsubst" . | quote }}
+      {{- end }}
+      scope: {{ include "netbird.escapeEnvsubst" .Values.oidc.pkceAuthFlow.providerConfig.scope | quote }}
+      {{- with .Values.oidc.pkceAuthFlow.providerConfig.redirectUrls }}
+      redirectURLs:
+        {{- range . }}
+        - {{ include "netbird.escapeEnvsubst" . | quote }}
+        {{- end }}
+      {{- end }}
+      useIdToken: {{ .Values.oidc.pkceAuthFlow.providerConfig.useIdToken }}
+      disablePromptLogin: {{ .Values.oidc.pkceAuthFlow.providerConfig.disablePromptLogin }}
+      loginFlag: {{ .Values.oidc.pkceAuthFlow.providerConfig.loginFlag }}
+{{- end }}
+{{- if .Values.oidc.idpManager.enabled }}
+
+  idpConfig:
+    managerType: {{ include "netbird.escapeEnvsubst" .Values.oidc.idpManager.managerType | quote }}
+    clientConfig:
+      issuer: {{ include "netbird.escapeEnvsubst" .Values.oidc.idpManager.clientConfig.issuer | quote }}
+      tokenEndpoint: {{ include "netbird.escapeEnvsubst" .Values.oidc.idpManager.clientConfig.tokenEndpoint | quote }}
+      clientId: {{ include "netbird.escapeEnvsubst" .Values.oidc.idpManager.clientConfig.clientId | quote }}
+      clientSecret: "${IDP_CLIENT_SECRET}"
+      grantType: {{ include "netbird.escapeEnvsubst" .Values.oidc.idpManager.clientConfig.grantType | quote }}
+    {{- with .Values.oidc.idpManager.extraConfig }}
+    extraConfig:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.oidc.idpManager.providerConfig }}
+    {{ include "netbird.oidc.providerCredentialsKey" $.Values.oidc.idpManager.managerType }}:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+{{- end }}
+{{- end }}
 {{- end }}
 
 {{/*

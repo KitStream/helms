@@ -1,0 +1,82 @@
+# E2E test values — OIDC with Keycloak deployed in-cluster.
+#
+# Keycloak is deployed as a simple pod in the same namespace.
+# The test configures a "netbird" realm with:
+#   - netbird-client (public, direct grant for testing)
+#   - netbird-backend (confidential, service accounts for IdP manager)
+#   - A test user for token acquisition
+
+database:
+  type: sqlite
+
+server:
+  persistentVolume:
+    enabled: false
+
+  stunService:
+    type: ClusterIP
+
+  config:
+    exposedAddress: "https://netbird.localhost"
+    auth:
+      issuer: "http://keycloak.netbird-e2e.svc.cluster.local:8080/realms/netbird"
+      dashboardRedirectURIs:
+        - "https://netbird.localhost/nb-auth"
+        - "https://netbird.localhost/nb-silent-auth"
+
+  livenessProbe:
+    failureThreshold: 20
+    initialDelaySeconds: 30
+    periodSeconds: 5
+    timeoutSeconds: 3
+    tcpSocket:
+      port: http
+  readinessProbe:
+    failureThreshold: 20
+    initialDelaySeconds: 30
+    periodSeconds: 5
+    timeoutSeconds: 3
+    tcpSocket:
+      port: http
+
+oidc:
+  enabled: true
+  audience: "netbird"
+  userIdClaim: "sub"
+  configEndpoint: "http://keycloak.netbird-e2e.svc.cluster.local:8080/realms/netbird/.well-known/openid-configuration"
+
+  deviceAuthFlow:
+    enabled: false
+
+  pkceAuthFlow:
+    enabled: true
+    providerConfig:
+      audience: "netbird"
+      clientId: "netbird-client"
+      clientSecret:
+        value: ""
+      tokenEndpoint: "http://keycloak.netbird-e2e.svc.cluster.local:8080/realms/netbird/protocol/openid-connect/token"
+      authorizationEndpoint: "http://keycloak.netbird-e2e.svc.cluster.local:8080/realms/netbird/protocol/openid-connect/auth"
+      scope: "openid profile email"
+      redirectUrls:
+        - "http://localhost:53000/"
+
+  idpManager:
+    enabled: true
+    managerType: "keycloak"
+    clientConfig:
+      issuer: "http://keycloak.netbird-e2e.svc.cluster.local:8080/realms/netbird"
+      tokenEndpoint: "http://keycloak.netbird-e2e.svc.cluster.local:8080/realms/netbird/protocol/openid-connect/token"
+      clientId: "netbird-backend"
+      clientSecret:
+        secretName: netbird-idp-secret
+        secretKey: clientSecret
+      grantType: "client_credentials"
+
+dashboard:
+  config:
+    mgmtApiEndpoint: "https://netbird.localhost"
+    mgmtGrpcApiEndpoint: "https://netbird.localhost"
+    authAuthority: "http://keycloak.netbird-e2e.svc.cluster.local:8080/realms/netbird"
+    authClientId: "netbird-client"
+    authAudience: "netbird"
