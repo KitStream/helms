@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+
+- **Automated upstream version tracking**: New scheduled GitHub Actions workflow
+  (`.github/workflows/upstream-check.yaml`) that runs daily to detect new
+  releases from upstream repositories and opens a GitHub issue when an update
+  is available. Currently tracks NetBird server (`netbirdio/netbird`).
+- `.upstream-monitor.yaml` configuration file mapping upstream GitHub
+  repositories to Helm chart version fields. Add new charts or sources by
+  extending this file.
+- `ci/scripts/upstream-check.sh` script that reads the monitor config, queries
+  the GitHub API for latest releases, compares with current chart versions,
+  and creates GitHub issues for available updates. Supports `DRY_RUN=true`
+  for preview mode.
+- Workflow supports manual trigger via `workflow_dispatch` with optional
+  dry-run input.
+
 ## [0.1.1] — 2026-02-26
 
 ### Added

@@ -1,0 +1,32 @@
+name: Upstream Version Check
+
+on:
+  schedule:
+    # Run daily at 08:00 UTC.
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Preview changes without creating an issue'
+        type: boolean
+        default: false
+
+permissions:
+  issues: write
+
+jobs:
+  check-upstream:
+    name: Check Upstream Releases
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install yq
+        uses: mikefarah/yq@v4
+
+      - name: Run upstream check
+        run: ci/scripts/upstream-check.sh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}

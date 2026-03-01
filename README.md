@@ -49,6 +49,54 @@ See each chart's README for detailed configuration.
 - [kubectl](https://kubernetes.io/docs/tasks/tools/) configured for your target cluster
 - Kubernetes 1.24+ (1.28+ for SQLite PAT seeding)
 
+## Automated Upstream Version Tracking
+
+A scheduled GitHub Actions workflow checks upstream repositories daily for new
+releases and opens a GitHub issue when a chart is behind upstream.
+
+### How It Works
+
+1. The workflow reads `.upstream-monitor.yaml` to discover which upstream repos
+   map to which chart version fields.
+2. For each source, it queries the GitHub Releases API for the latest non-draft,
+   non-prerelease tag.
+3. If the upstream version differs from what the chart currently references, a
+   GitHub issue is created with the current and latest versions, a link to the
+   upstream release, and a checklist of what needs to be done.
+
+### Configuration
+
+Edit `.upstream-monitor.yaml` to add new charts or upstream sources:
+
+```yaml
+charts:
+  - name: netbird
+    path: charts/netbird
+    sources:
+      - name: server
+        github: netbirdio/netbird
+        strip_v_prefix: true
+        targets:
+          - file: Chart.yaml
+            yaml_path: .appVersion
+```
+
+### Manual Trigger
+
+Run the check on demand from the Actions tab → **Upstream Version Check** →
+**Run workflow**. Enable the `dry_run` checkbox to preview changes without
+creating an issue.
+
+### Local Usage
+
+```bash
+# Preview what would change (no issue created)
+DRY_RUN=true ./ci/scripts/upstream-check.sh
+
+# Run for real (requires gh auth login)
+./ci/scripts/upstream-check.sh
+```
+
 ## Contributing
 
 We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) before submitting pull requests.
