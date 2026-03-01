@@ -49,6 +49,61 @@ See each chart's README for detailed configuration.
 - [kubectl](https://kubernetes.io/docs/tasks/tools/) configured for your target cluster
 - Kubernetes 1.24+ (1.28+ for SQLite PAT seeding)
 
+## Automated Upstream Version Tracking
+
+A scheduled GitHub Actions workflow checks upstream repositories daily for new
+releases and opens PRs to update the corresponding Helm charts.
+
+### How It Works
+
+1. The workflow reads `.upstream-monitor.yaml` to discover which upstream repos
+   map to which chart files.
+2. For each source, it queries the GitHub Releases API for the latest non-draft,
+   non-prerelease tag.
+3. If the upstream version differs from what the chart currently references, the
+   script updates `Chart.yaml` (appVersion), `values.yaml` (image tags), and
+   test assertions, bumps the chart patch version, and opens a PR.
+4. Standard CI (lint, unit tests, E2E) runs on the PR automatically.
+
+### Configuration
+
+Edit `.upstream-monitor.yaml` to add new charts or upstream sources:
+
+```yaml
+charts:
+  - name: netbird
+    path: charts/netbird
+    sources:
+      - name: server
+        github: netbirdio/netbird
+        strip_v_prefix: true
+        targets:
+          - file: Chart.yaml
+            yaml_path: .appVersion
+      - name: dashboard
+        github: netbirdio/dashboard
+        strip_v_prefix: false
+        targets:
+          - file: values.yaml
+            yaml_path: .dashboard.image.tag
+```
+
+### Manual Trigger
+
+Run the check on demand from the Actions tab → **Upstream Version Check** →
+**Run workflow**. Enable the `dry_run` checkbox to preview changes without
+creating a PR.
+
+### Local Usage
+
+```bash
+# Preview what would change (no branch/PR created)
+DRY_RUN=true ./ci/scripts/upstream-check.sh
+
+# Run for real (requires gh auth login)
+./ci/scripts/upstream-check.sh
+```
+
 ## Contributing
 
 We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) before submitting pull requests.
