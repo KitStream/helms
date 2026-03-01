@@ -11,16 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - **Automated upstream version tracking**: New scheduled GitHub Actions workflow
   (`.github/workflows/upstream-check.yaml`) that runs daily to detect new
-  releases from upstream repositories (NetBird server, NetBird dashboard) and
-  automatically opens a PR with updated chart versions, image tags, and test
-  assertions.
+  releases from upstream repositories and opens a GitHub issue when an update
+  is available. Currently tracks NetBird server (`netbirdio/netbird`).
 - `.upstream-monitor.yaml` configuration file mapping upstream GitHub
-  repositories to Helm chart targets. Add new charts or sources by extending
-  this file.
+  repositories to Helm chart version fields. Add new charts or sources by
+  extending this file.
 - `ci/scripts/upstream-check.sh` script that reads the monitor config, queries
   the GitHub API for latest releases, compares with current chart versions,
-  and creates update PRs with version bumps. Supports `DRY_RUN=true` for
-  preview mode.
+  and creates GitHub issues for available updates. Supports `DRY_RUN=true`
+  for preview mode.
 - Workflow supports manual trigger via `workflow_dispatch` with optional
   dry-run input.
 

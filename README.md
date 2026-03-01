@@ -52,18 +52,17 @@ See each chart's README for detailed configuration.
 ## Automated Upstream Version Tracking
 
 A scheduled GitHub Actions workflow checks upstream repositories daily for new
-releases and opens PRs to update the corresponding Helm charts.
+releases and opens a GitHub issue when a chart is behind upstream.
 
 ### How It Works
 
 1. The workflow reads `.upstream-monitor.yaml` to discover which upstream repos
-   map to which chart files.
+   map to which chart version fields.
 2. For each source, it queries the GitHub Releases API for the latest non-draft,
    non-prerelease tag.
-3. If the upstream version differs from what the chart currently references, the
-   script updates `Chart.yaml` (appVersion), `values.yaml` (image tags), and
-   test assertions, bumps the chart patch version, and opens a PR.
-4. Standard CI (lint, unit tests, E2E) runs on the PR automatically.
+3. If the upstream version differs from what the chart currently references, a
+   GitHub issue is created with the current and latest versions, a link to the
+   upstream release, and a checklist of what needs to be done.
 
 ### Configuration
 
@@ -80,24 +79,18 @@ charts:
         targets:
           - file: Chart.yaml
             yaml_path: .appVersion
-      - name: dashboard
-        github: netbirdio/dashboard
-        strip_v_prefix: false
-        targets:
-          - file: values.yaml
-            yaml_path: .dashboard.image.tag
 ```
 
 ### Manual Trigger
 
 Run the check on demand from the Actions tab → **Upstream Version Check** →
 **Run workflow**. Enable the `dry_run` checkbox to preview changes without
-creating a PR.
+creating an issue.
 
 ### Local Usage
 
 ```bash
-# Preview what would change (no branch/PR created)
+# Preview what would change (no issue created)
 DRY_RUN=true ./ci/scripts/upstream-check.sh
 
 # Run for real (requires gh auth login)

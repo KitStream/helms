@@ -2,22 +2,22 @@
 #
 # Maps upstream product repositories to Helm chart artifacts.
 # The ci/scripts/upstream-check.sh script reads this file to detect
-# new upstream releases and update the corresponding charts.
+# new upstream releases and open a GitHub issue when an update is available.
 #
 # Adding a new chart:
 #   1. Add a new entry under `charts:` with the chart path.
 #   2. List each upstream source with its GitHub repository.
-#   3. Define targets — which files and YAML paths to update.
+#   3. Define targets — which files and YAML paths hold the current version.
 #
 # Fields:
-#   name            — human-readable chart name (used in branch/PR names)
+#   name            — human-readable chart name (used in issue titles)
 #   path            — path to the chart directory relative to repo root
 #   sources[].name  — identifier for this upstream component
 #   sources[].github — GitHub owner/repo (used to query releases)
 #   sources[].strip_v_prefix — if true, strip leading "v" from the release
-#                     tag before writing to target files (e.g. "v0.65.3" → "0.65.3")
-#   sources[].targets[].file      — file to update, relative to chart path
-#   sources[].targets[].yaml_path — yq expression to the field to update
+#                     tag before comparing (e.g. "v0.65.3" → "0.65.3")
+#   sources[].targets[].file      — file holding current version, relative to chart path
+#   sources[].targets[].yaml_path — yq expression to the version field
 
 charts:
   - name: netbird
@@ -29,9 +29,3 @@ charts:
         targets:
           - file: Chart.yaml
             yaml_path: .appVersion
-      - name: dashboard
-        github: netbirdio/dashboard
-        strip_v_prefix: false
-        targets:
-          - file: values.yaml
-            yaml_path: .dashboard.image.tag

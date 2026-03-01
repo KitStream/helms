@@ -7,13 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Preview changes without creating a PR'
+        description: 'Preview changes without creating an issue'
         type: boolean
         default: false
 
 permissions:
-  contents: write
-  pull-requests: write
+  issues: write
 
 jobs:
   check-upstream:
@@ -22,8 +21,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Install yq
         uses: mikefarah/yq@v4
@@ -33,4 +30,3 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DRY_RUN: ${{ inputs.dry_run || 'false' }}
-          BASE_BRANCH: ${{ github.event.repository.default_branch }}
