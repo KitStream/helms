@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Bash(gh:*)",
+      "Bash(make:*)",
+      "Bash(helm:*)",
+      "Bash(yq:*)",
+      "Bash(jq:*)",
+      "Bash(kubectl:*)",
+      "Bash(kind:*)",
+      "Bash(ci/scripts/*)",
+      "Edit",
+      "Write",
+      "Read",
+      "Glob",
+      "Grep",
+      "Agent",
+      "WebFetch",
+      "WebSearch"
+    ]
+  }
+}
