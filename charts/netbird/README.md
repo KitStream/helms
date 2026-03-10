@@ -1,8 +1,8 @@
 # NetBird Helm Chart
 
 [![CI](https://github.com/KitStream/helms/actions/workflows/ci.yaml/badge.svg)](https://github.com/KitStream/helms/actions/workflows/ci.yaml)
-[![Chart Version](https://img.shields.io/badge/chart-0.1.1-blue)](https://github.com/KitStream/helms/releases)
-[![App Version](https://img.shields.io/badge/netbird-0.65.3-green)](https://github.com/netbirdio/netbird)
+[![Chart Version](https://img.shields.io/badge/chart-0.1.2-blue)](https://github.com/KitStream/helms/releases)
+[![App Version](https://img.shields.io/badge/netbird-0.66.3-green)](https://github.com/netbirdio/netbird)
 
 A Helm chart for deploying [NetBird](https://netbird.io) VPN management, signal, dashboard, and relay services on Kubernetes.
 
