@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Fixed
+
+- **Upstream version check workflow**: The `autorelease` label is now created
+  automatically if it does not exist, fixing the scheduled workflow failure
+  (`could not add label: 'autorelease' not found`).
+
 ### Added
 
 - **Automated upstream version tracking**: New scheduled GitHub Actions workflow

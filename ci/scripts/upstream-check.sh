@@ -192,6 +192,11 @@ main() {
       continue
     fi
 
+    # ── Ensure label exists ─────────────────────────────────────────────
+    if ! gh label list --search "autorelease" --json name --jq '.[].name' 2>/dev/null | grep -qx "autorelease"; then
+      gh label create autorelease --description "Automated upstream version update" --color "0e8a16" 2>/dev/null || true
+    fi
+
     # ── Create issue ───────────────────────────────────────────────────
     gh issue create \
       --title "$issue_title" \
