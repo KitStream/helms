@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Changed
+
+- **netbird**: Bump appVersion from 0.65.3 to 0.66.3 (chart version 0.1.2).
+  Bug fixes and improvements; no breaking changes. See
+  [v0.66.3 release notes](https://github.com/netbirdio/netbird/releases/tag/v0.66.3).
+
 ### Fixed
 
 - **Upstream version check workflow**: The `autorelease` label is now created
