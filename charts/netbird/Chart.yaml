@@ -30,14 +30,10 @@ annotations:
     - name: Initium
       url: https://github.com/KitStream/initium
   artifacthub.io/changes: |
-    - kind: added
-      description: OIDC/SSO configuration with Keycloak, Auth0, Azure, Zitadel support
-    - kind: added
-      description: PAT seeding with automatic SHA256 hash computation
-    - kind: added
-      description: Structured database configuration (database.*)
-    - kind: added
-      description: Initium init containers for database wait and seed
     - kind: changed
-      description: "Breaking: removed raw DSN in favor of structured database config"
+      description: Bump appVersion from 0.65.3 to 0.66.3
+    - kind: fixed
+      description: Auto-create autorelease label in upstream-check workflow
+    - kind: added
+      description: Automated upstream version tracking via daily GitHub Actions workflow
 
