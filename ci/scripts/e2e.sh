@@ -312,4 +312,170 @@ kubectl -n "$NAMESPACE" wait --for=jsonpath='{.status.phase}'=Succeeded pod/pat-
 }
 log "PAT test pod logs:"
 kubectl -n "$NAMESPACE" logs pat-test || true
-log "E2E test with $BACKEND backend PASSED (including PAT seeding)!"
+
+# ── Peer join test: create setup key → join peer → verify ────────────
+log "Testing peer registration flow..."
+
+# Step 1: Create a non-"All" group, then create a setup key with it.
+# NetBird forbids adding the "All" group to setup keys, so we create a
+# dedicated "e2e-peers" group and use that for auto_groups.  Peers are
+# automatically added to the "All" group by AddPeerToAllGroup() anyway.
+kubectl -n "$NAMESPACE" run peer-join-test --image=alpine:3.20 --restart=Never \
+  --env="PAT_TOKEN=$PAT_TOKEN" \
+  --env="SVC_URL=$SVC_URL" \
+  --command -- sh -c '
+    apk add --no-cache curl jq >/dev/null 2>&1
+    sleep 3
+
+    # Verify the All group exists (proves the seed worked)
+    echo "==> Verifying All group exists..."
+    GROUPS=$(curl -s \
+      -H "Authorization: Token $PAT_TOKEN" \
+      "$SVC_URL/api/groups")
+    ALL_GROUP_ID=$(echo "$GROUPS" | jq -r ".[] | select(.name==\"All\") | .id")
+    if [ -z "$ALL_GROUP_ID" ]; then
+      echo "FAIL: Could not find All group"
+      echo "Groups response: $GROUPS"
+      exit 1
+    fi
+    echo "All group ID: $ALL_GROUP_ID"
+
+    # Create a dedicated group for the setup key
+    echo "==> Creating e2e-peers group..."
+    GRP_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+      -H "Authorization: Token $PAT_TOKEN" \
+      -H "Content-Type: application/json" \
+      "$SVC_URL/api/groups" \
+      -d "{\"name\":\"e2e-peers\"}")
+    GRP_HTTP=$(echo "$GRP_RESPONSE" | tail -1)
+    GRP_BODY=$(echo "$GRP_RESPONSE" | sed "\$d")
+    echo "Create group HTTP status: $GRP_HTTP"
+    E2E_GROUP_ID=$(echo "$GRP_BODY" | jq -r ".id")
+    if [ -z "$E2E_GROUP_ID" ] || [ "$E2E_GROUP_ID" = "null" ]; then
+      echo "FAIL: Could not create e2e-peers group"
+      echo "Response: $GRP_BODY"
+      exit 1
+    fi
+    echo "e2e-peers group ID: $E2E_GROUP_ID"
+
+    # Create a reusable setup key using the e2e-peers group
+    echo "==> Creating setup key..."
+    SK_BODY=$(jq -n \
+      --arg gid "$E2E_GROUP_ID" \
+      "{name:\"e2e-test-key\",type:\"reusable\",expires_in:86400,auto_groups:[\$gid],usage_limit:0}")
+    echo "Request body: $SK_BODY"
+    SK_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+      -H "Authorization: Token $PAT_TOKEN" \
+      -H "Content-Type: application/json" \
+      "$SVC_URL/api/setup-keys" \
+      -d "$SK_BODY")
+    SK_HTTP_CODE=$(echo "$SK_RESPONSE" | tail -1)
+    SK_BODY_RESP=$(echo "$SK_RESPONSE" | sed "\$d")
+    echo "HTTP status: $SK_HTTP_CODE"
+    echo "Response: $(echo "$SK_BODY_RESP" | head -c 300)"
+    SETUP_KEY=$(echo "$SK_BODY_RESP" | jq -r ".key")
+    if [ -z "$SETUP_KEY" ] || [ "$SETUP_KEY" = "null" ]; then
+      echo "FAIL: Could not create setup key"
+      exit 1
+    fi
+    echo "Setup key created: $(echo $SETUP_KEY | cut -c1-8)..."
+    # Output in a machine-parseable format for extraction
+    echo "SETUP_KEY=$SETUP_KEY"
+    echo "PASS: Setup key created successfully"
+  '
+
+log "Waiting for peer-join-test pod..."
+kubectl -n "$NAMESPACE" wait --for=condition=Ready pod/peer-join-test --timeout=60s 2>/dev/null || true
+kubectl -n "$NAMESPACE" wait --for=jsonpath='{.status.phase}'=Succeeded pod/peer-join-test --timeout=60s || {
+  log "peer-join-test pod logs:"
+  kubectl -n "$NAMESPACE" logs peer-join-test || true
+  fail "Setup key creation failed"
+}
+log "peer-join-test pod logs:"
+kubectl -n "$NAMESPACE" logs peer-join-test || true
+
+# Step 2: Extract the setup key from the pod logs.
+# The pod writes "SETUP_KEY=<value>" so we can parse it reliably.
+SETUP_KEY=$(kubectl -n "$NAMESPACE" logs peer-join-test | sed -n 's/^SETUP_KEY=//p')
+if [ -z "$SETUP_KEY" ]; then
+  fail "Could not extract setup key from peer-join-test logs"
+fi
+log "Using setup key: ${SETUP_KEY:0:8}..."
+
+# Step 3: Run a NetBird client pod that registers using the setup key.
+# The official netbird image uses an entrypoint script that starts the
+# daemon service and then runs "netbird up". We pass the setup key and
+# management URL via environment variables that the entrypoint reads.
+MGMT_URL="http://$RELEASE-server.$NAMESPACE.svc.cluster.local:80"
+log "Starting NetBird peer pod..."
+cat <<PEER_EOF | kubectl -n "$NAMESPACE" apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: netbird-peer
+spec:
+  restartPolicy: Never
+  containers:
+    - name: netbird-peer
+      image: netbirdio/netbird:latest
+      env:
+        - name: NB_SETUP_KEY
+          value: "$SETUP_KEY"
+        - name: NB_MANAGEMENT_URL
+          value: "$MGMT_URL"
+        - name: NB_LOG_FILE
+          value: "console"
+        - name: NB_HOSTNAME
+          value: "e2e-test-peer"
+      securityContext:
+        capabilities:
+          add: ["NET_ADMIN", "NET_RAW", "BPF"]
+PEER_EOF
+
+log "Waiting for netbird-peer pod to start (up to 90s)..."
+kubectl -n "$NAMESPACE" wait --for=condition=Ready pod/netbird-peer --timeout=90s 2>/dev/null || true
+
+# Give it time to register with the management server
+sleep 30
+
+log "NetBird peer logs (last 40 lines):"
+kubectl -n "$NAMESPACE" logs netbird-peer 2>/dev/null | tail -40 || true
+
+# Step 4: Verify peer appears in the management API
+log "Verifying peer registration via API..."
+kubectl -n "$NAMESPACE" run peer-verify --image=alpine:3.20 --restart=Never \
+  --env="PAT_TOKEN=$PAT_TOKEN" \
+  --env="SVC_URL=$SVC_URL" \
+  --command -- sh -c '
+    apk add --no-cache curl jq >/dev/null 2>&1
+    sleep 3
+    echo "==> Checking /api/peers..."
+    PEERS=$(curl -s \
+      -H "Authorization: Token $PAT_TOKEN" \
+      "$SVC_URL/api/peers")
+    echo "Peers response: $(echo "$PEERS" | jq "." | head -c 1000)"
+    PEER_COUNT=$(echo "$PEERS" | jq "length")
+    echo "Peer count: $PEER_COUNT"
+    if [ "$PEER_COUNT" -ge 1 ]; then
+      PEER_NAME=$(echo "$PEERS" | jq -r ".[0].hostname // .[0].name // \"unknown\"")
+      echo "PASS: Found registered peer: $PEER_NAME"
+      exit 0
+    else
+      echo "FAIL: No peers registered"
+      exit 1
+    fi
+  '
+
+log "Waiting for peer-verify pod..."
+kubectl -n "$NAMESPACE" wait --for=condition=Ready pod/peer-verify --timeout=60s 2>/dev/null || true
+kubectl -n "$NAMESPACE" wait --for=jsonpath='{.status.phase}'=Succeeded pod/peer-verify --timeout=60s || {
+  log "peer-verify pod logs:"
+  kubectl -n "$NAMESPACE" logs peer-verify || true
+  log "netbird-peer logs (last 50 lines):"
+  kubectl -n "$NAMESPACE" logs netbird-peer 2>/dev/null | tail -50 || true
+  fail "Peer registration verification failed"
+}
+log "peer-verify pod logs:"
+kubectl -n "$NAMESPACE" logs peer-verify || true
+
+log "E2E test with $BACKEND backend PASSED (including PAT seeding and peer registration)!"
