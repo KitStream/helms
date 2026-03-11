@@ -154,6 +154,15 @@ tests:
           path: data["pat-seed.yaml"]
           pattern: "name: policy_rules"
 
+  - it: should use reconcile mode on seed sets
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+    asserts:
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "mode: reconcile"
+
   - it: should compute hashed_token from PAT_TOKEN via sha256 and base64_encode
     set:
       pat.enabled: true

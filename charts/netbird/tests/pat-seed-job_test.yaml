@@ -120,7 +120,7 @@ tests:
           value: wait-server
       - equal:
           path: spec.template.spec.initContainers[0].image
-          value: "ghcr.io/kitstream/initium:1.0.4"
+          value: "ghcr.io/kitstream/initium:1.2.0"
       - contains:
           path: spec.template.spec.initContainers[0].args
           content: "tcp://RELEASE-NAME-netbird-server:80"
@@ -159,7 +159,7 @@ tests:
           value: pat-seed
       - equal:
           path: spec.template.spec.containers[0].image
-          value: "ghcr.io/kitstream/initium:1.0.4"
+          value: "ghcr.io/kitstream/initium:1.2.0"
 
   - it: should inject PAT_TOKEN env var from secret
     set:
