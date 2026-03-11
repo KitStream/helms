@@ -409,9 +409,24 @@ phases:
             rows:
               - id: {{ .Values.pat.accountId | quote }}
                 created_by: "helm-seed"
+                created_at: {{ now | date "2006-01-02 15:04:05" | quote }}
                 domain: "netbird.selfhosted"
                 domain_category: "private"
                 is_domain_primary_account: 1
+                network_net: '{"IP":"100.64.0.0","Mask":"//AAAA=="}'
+                network_serial: 0
+                dns_settings_disabled_management_groups: "[]"
+                settings_peer_login_expiration_enabled: 1
+                settings_peer_login_expiration: 86400000000000
+                settings_peer_inactivity_expiration_enabled: 0
+                settings_peer_inactivity_expiration: 600000000000
+                settings_regular_users_view_blocked: 1
+                settings_groups_propagation_enabled: 1
+                settings_jwt_groups_enabled: 0
+                settings_routing_peer_dns_resolution_enabled: 1
+                settings_peer_expose_enabled: 0
+                settings_extra_peer_approval_enabled: 0
+                settings_extra_user_approval_required: 1
       - name: pat-user
         order: 2
         tables:
@@ -425,7 +440,10 @@ phases:
                 service_user_name: "helm-seed-service-user"
                 non_deletable: 0
                 blocked: 0
+                pending_approval: 0
                 issued: "api"
+                integration_ref_id: 0
+                integration_ref_integration_type: ""
       - name: pat-token
         order: 3
         tables:
