@@ -370,7 +370,9 @@ The seed waits for the personal_access_tokens table (created by NetBird
 on startup via GORM AutoMigrate), then idempotently inserts the
 account, user, PAT, "All" group, default policy, and default policy
 rule records.
-MiniJinja placeholders (Initium v1.0.4+):
+Seed sets use mode: reconcile (Initium v1.2.0+) so that value
+changes in the Helm chart are reflected in the database on upgrade.
+MiniJinja placeholders:
   {{ env.PAT_TOKEN | sha256("bytes") | base64_encode }} — computes the
   base64-encoded SHA256 hash from the plaintext PAT at seed time.
 */}}
@@ -402,6 +404,7 @@ phases:
         timeout: 120s
     seed_sets:
       - name: pat-account
+        mode: reconcile
         order: 1
         tables:
           - table: accounts
@@ -428,6 +431,7 @@ phases:
                 settings_extra_peer_approval_enabled: 0
                 settings_extra_user_approval_required: 1
       - name: pat-user
+        mode: reconcile
         order: 2
         tables:
           - table: users
@@ -445,6 +449,7 @@ phases:
                 integration_ref_id: 0
                 integration_ref_integration_type: ""
       - name: pat-token
+        mode: reconcile
         order: 3
         tables:
           - table: personal_access_tokens
@@ -458,6 +463,7 @@ phases:
                 created_by: {{ .Values.pat.userId | quote }}
                 created_at: {{ now | date "2006-01-02 15:04:05" | quote }}
       - name: pat-all-group
+        mode: reconcile
         order: 4
         tables:
           - table: groups
@@ -468,6 +474,7 @@ phases:
                 name: "All"
                 issued: "api"
       - name: pat-default-policy
+        mode: reconcile
         order: 5
         tables:
           - table: policies
@@ -479,6 +486,7 @@ phases:
                 description: "This is a default policy that allows connections between all the resources"
                 enabled: 1
       - name: pat-default-policy-rule
+        mode: reconcile
         order: 6
         tables:
           - table: policy_rules
