@@ -368,7 +368,8 @@ netbird.pat.seedSpec — renders the Initium seed spec YAML for
 inserting a Personal Access Token into the database.
 The seed waits for the personal_access_tokens table (created by NetBird
 on startup via GORM AutoMigrate), then idempotently inserts the
-account, user, and PAT records.
+account, user, PAT, "All" group, default policy, and default policy
+rule records.
 MiniJinja placeholders (Initium v1.0.4+):
   {{ env.PAT_TOKEN | sha256("bytes") | base64_encode }} — computes the
   base64-encoded SHA256 hash from the plaintext PAT at seed time.
@@ -389,6 +390,15 @@ phases:
         timeout: 120s
       - type: table
         name: accounts
+        timeout: 120s
+      - type: table
+        name: groups
+        timeout: 120s
+      - type: table
+        name: policies
+        timeout: 120s
+      - type: table
+        name: policy_rules
         timeout: 120s
     seed_sets:
       - name: pat-account
@@ -429,4 +439,41 @@ phases:
                 expiration_date: {{ now | dateModify (printf "+%dh" (mul .Values.pat.expirationDays 24)) | date "2006-01-02 15:04:05" | quote }}
                 created_by: {{ .Values.pat.userId | quote }}
                 created_at: {{ now | date "2006-01-02 15:04:05" | quote }}
+      - name: pat-all-group
+        order: 4
+        tables:
+          - table: groups
+            unique_key: [id]
+            rows:
+              - id: "helm-seed-all-group"
+                account_id: {{ .Values.pat.accountId | quote }}
+                name: "All"
+                issued: "api"
+      - name: pat-default-policy
+        order: 5
+        tables:
+          - table: policies
+            unique_key: [id]
+            rows:
+              - id: "helm-seed-default-policy"
+                account_id: {{ .Values.pat.accountId | quote }}
+                name: "Default"
+                description: "This is a default policy that allows connections between all the resources"
+                enabled: 1
+      - name: pat-default-policy-rule
+        order: 6
+        tables:
+          - table: policy_rules
+            unique_key: [id]
+            rows:
+              - id: "helm-seed-default-policy-rule"
+                policy_id: "helm-seed-default-policy"
+                name: "Default"
+                description: "This is a default rule that allows connections between all the resources"
+                enabled: 1
+                action: "accept"
+                destinations: '["helm-seed-all-group"]'
+                sources: '["helm-seed-all-group"]'
+                bidirectional: 1
+                protocol: "all"
 {{- end }}

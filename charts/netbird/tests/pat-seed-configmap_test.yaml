@@ -144,6 +144,15 @@ tests:
       - matchRegex:
           path: data["pat-seed.yaml"]
           pattern: "name: accounts"
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "name: groups"
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "name: policies"
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "name: policy_rules"
 
   - it: should compute hashed_token from PAT_TOKEN via sha256 and base64_encode
     set:
@@ -168,3 +177,12 @@ tests:
       - matchRegex:
           path: data["pat-seed.yaml"]
           pattern: "table: personal_access_tokens"
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "table: groups"
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "table: policies"
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "table: policy_rules"
