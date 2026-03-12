@@ -144,15 +144,6 @@ tests:
       - matchRegex:
           path: data["pat-seed.yaml"]
           pattern: "name: accounts"
-      - matchRegex:
-          path: data["pat-seed.yaml"]
-          pattern: "name: groups"
-      - matchRegex:
-          path: data["pat-seed.yaml"]
-          pattern: "name: policies"
-      - matchRegex:
-          path: data["pat-seed.yaml"]
-          pattern: "name: policy_rules"
 
   - it: should use reconcile mode on seed sets
     set:
@@ -172,7 +163,7 @@ tests:
           path: data["pat-seed.yaml"]
           pattern: 'env\.PAT_TOKEN \| sha256\("bytes"\) \| base64_encode'
 
-  - it: should seed account user and pat tables
+  - it: should seed account user and pat tables only
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
@@ -186,12 +177,17 @@ tests:
       - matchRegex:
           path: data["pat-seed.yaml"]
           pattern: "table: personal_access_tokens"
+
+  - it: should contain provision.sh script
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+    asserts:
+      - exists:
+          path: data["provision.sh"]
       - matchRegex:
-          path: data["pat-seed.yaml"]
-          pattern: "table: groups"
+          path: data["provision.sh"]
+          pattern: "api/groups"
       - matchRegex:
-          path: data["pat-seed.yaml"]
-          pattern: "table: policies"
-      - matchRegex:
-          path: data["pat-seed.yaml"]
-          pattern: "table: policy_rules"
+          path: data["provision.sh"]
+          pattern: "api/policies"

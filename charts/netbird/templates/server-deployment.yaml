@@ -184,6 +184,31 @@ spec:
               readOnly: true
             - name: data
               mountPath: /var/lib/netbird
+        # ── API provisioning sidecar (SQLite only) ──────────────────────
+        # Creates the "All" group and default policy via the REST API after
+        # the PAT seed completes. Runs as a native sidecar so it can wait
+        # for the server to be ready. The script is idempotent.
+        - name: api-provision
+          restartPolicy: Always
+          image: alpine:3.20
+          command: ["sh", "-c", "sh /spec/provision.sh && sleep infinity"]
+          env:
+            - name: PAT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.pat.secret.secretName }}
+                  key: {{ .Values.pat.secret.tokenKey }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            readOnlyRootFilesystem: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: pat-seed-config
+              mountPath: /spec
+              readOnly: true
         {{- end }}
       containers:
         - name: server

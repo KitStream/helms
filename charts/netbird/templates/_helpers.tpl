@@ -393,18 +393,10 @@ phases:
       - type: table
         name: accounts
         timeout: 120s
-      - type: table
-        name: groups
-        timeout: 120s
-      - type: table
-        name: policies
-        timeout: 120s
-      - type: table
-        name: policy_rules
-        timeout: 120s
     seed_sets:
       - name: pat-account
         mode: reconcile
+        ignore_columns: [network_serial]
         order: 1
         tables:
           - table: accounts
@@ -462,44 +454,86 @@ phases:
                 expiration_date: {{ now | dateModify (printf "+%dh" (mul .Values.pat.expirationDays 24)) | date "2006-01-02 15:04:05" | quote }}
                 created_by: {{ .Values.pat.userId | quote }}
                 created_at: {{ now | date "2006-01-02 15:04:05" | quote }}
-      - name: pat-all-group
-        mode: reconcile
-        order: 4
-        tables:
-          - table: groups
-            unique_key: [id]
-            rows:
-              - id: "helm-seed-all-group"
-                account_id: {{ .Values.pat.accountId | quote }}
-                name: "All"
-                issued: "api"
-      - name: pat-default-policy
-        mode: reconcile
-        order: 5
-        tables:
-          - table: policies
-            unique_key: [id]
-            rows:
-              - id: "helm-seed-default-policy"
-                account_id: {{ .Values.pat.accountId | quote }}
-                name: "Default"
-                description: "This is a default policy that allows connections between all the resources"
-                enabled: 1
-      - name: pat-default-policy-rule
-        mode: reconcile
-        order: 6
-        tables:
-          - table: policy_rules
-            unique_key: [id]
-            rows:
-              - id: "helm-seed-default-policy-rule"
-                policy_id: "helm-seed-default-policy"
-                name: "Default"
-                description: "This is a default rule that allows connections between all the resources"
-                enabled: 1
-                action: "accept"
-                destinations: '["helm-seed-all-group"]'
-                sources: '["helm-seed-all-group"]'
-                bidirectional: 1
-                protocol: "all"
+{{- end }}
+{{/*
+netbird.pat.provisionScript — shell script that creates the "All" group
+and a default allow-all policy via the NetBird REST API. This runs after
+the Initium seed so the PAT is available for authentication.
+
+The script is idempotent: it skips creation if the objects already exist.
+*/}}
+{{- define "netbird.pat.provisionScript" -}}
+#!/bin/sh
+set -eu
+
+apk add --no-cache curl python3 >/dev/null 2>&1 || true
+
+SVC_URL="http://{{ include "netbird.server.fullname" . }}:{{ .Values.server.service.port }}"
+
+echo "==> Waiting for NetBird API to accept PAT authentication..."
+for i in $(seq 1 60); do
+  HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' \
+    -H "Authorization: Token $PAT_TOKEN" \
+    "$SVC_URL/api/groups" 2>/dev/null) || true
+  if [ "$HTTP_CODE" = "200" ]; then
+    break
+  fi
+  if [ "$i" -eq 60 ]; then
+    echo "FATAL: API did not become ready within timeout"
+    exit 1
+  fi
+  sleep 3
+done
+
+echo "==> Checking for existing All group..."
+GROUPS=$(curl -s -H "Authorization: Token $PAT_TOKEN" "$SVC_URL/api/groups")
+ALL_GROUP_ID=$(echo "$GROUPS" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+# Check if any group named "All" exists
+if echo "$GROUPS" | grep -q '"name":"All"'; then
+  ALL_GROUP_ID=$(echo "$GROUPS" | python3 -c "
+import sys,json
+groups=json.load(sys.stdin)
+for g in groups:
+    if g['name']=='All':
+        print(g['id']); break
+" 2>/dev/null) || true
+  echo "All group already exists (id: $ALL_GROUP_ID)"
+else
+  echo "==> Creating All group via API..."
+  ALL_RESP=$(curl -s -X POST \
+    -H "Authorization: Token $PAT_TOKEN" \
+    -H "Content-Type: application/json" \
+    "$SVC_URL/api/groups" \
+    -d '{"name":"All"}')
+  ALL_GROUP_ID=$(echo "$ALL_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+  echo "Created All group (id: $ALL_GROUP_ID)"
+fi
+
+if [ -z "$ALL_GROUP_ID" ]; then
+  echo "FATAL: Could not determine All group ID"
+  exit 1
+fi
+
+echo "==> Checking for existing default policy..."
+POLICIES=$(curl -s -H "Authorization: Token $PAT_TOKEN" "$SVC_URL/api/policies")
+if echo "$POLICIES" | grep -q '"name":"Default"'; then
+  echo "Default policy already exists — skipping"
+else
+  echo "==> Creating default allow-all policy via API..."
+  POLICY_BODY="{\"name\":\"Default\",\"description\":\"Default policy allowing all connections\",\"enabled\":true,\"rules\":[{\"name\":\"Default\",\"description\":\"Allow all connections\",\"enabled\":true,\"action\":\"accept\",\"bidirectional\":true,\"protocol\":\"all\",\"sources\":[\"$ALL_GROUP_ID\"],\"destinations\":[\"$ALL_GROUP_ID\"]}]}"
+  POL_RESP=$(curl -s -w "\n%{http_code}" -X POST \
+    -H "Authorization: Token $PAT_TOKEN" \
+    -H "Content-Type: application/json" \
+    "$SVC_URL/api/policies" \
+    -d "$POLICY_BODY")
+  POL_HTTP=$(echo "$POL_RESP" | tail -1)
+  if [ "$POL_HTTP" != "200" ]; then
+    echo "FATAL: Failed to create default policy (HTTP $POL_HTTP)"
+    echo "$POL_RESP" | sed '$d'
+    exit 1
+  fi
+  echo "Created default policy"
+fi
+
+echo "==> API provisioning complete"
 {{- end }}
