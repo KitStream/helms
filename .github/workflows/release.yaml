@@ -45,12 +45,6 @@ jobs:
               continue
             fi
 
-            # Check if Chart.yaml was actually changed in this push
-            if ! git diff HEAD~1 --name-only -- "$chart_yaml" | grep -q .; then
-              echo "Chart.yaml not changed for ${chart_name} — skipping"
-              continue
-            fi
-
             echo "::group::Releasing ${chart_name} v${version}"
 
             # Login to GHCR
