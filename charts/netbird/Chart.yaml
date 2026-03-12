@@ -2,7 +2,7 @@ apiVersion: v2
 name: netbird
 description: A Helm chart for deploying NetBird VPN management, signal, dashboard, and relay services on Kubernetes
 type: application
-version: 0.1.3
+version: 0.2.0
 appVersion: "0.66.3"
 keywords:
   - netbird
@@ -30,8 +30,8 @@ annotations:
     - name: Initium
       url: https://github.com/KitStream/initium
   artifacthub.io/changes: |
-    - kind: fixed
-      description: Seed "All" group and default policy in PAT seed spec to fix peer registration failure
     - kind: added
-      description: E2E peer-join test covering setup key creation and NetBird client registration
+      description: Upgrade Initium to v1.2.0 and enable reconcile mode on PAT seed sets
+    - kind: fixed
+      description: Set default values for all NOT NULL columns in PAT seed
 
