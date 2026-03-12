@@ -2,8 +2,9 @@ name: Release
 
 on:
   push:
-    tags:
-      - '*-[0-9]*.[0-9]*.[0-9]*'
+    branches: [main]
+    paths:
+      - 'charts/*/Chart.yaml'
 
 permissions:
   contents: write
@@ -11,64 +12,74 @@ permissions:
 
 jobs:
   release:
-    name: Package & Publish
+    name: Release Charts
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
         with:
           version: v4.0.2
 
-      - name: Parse tag
-        id: parse
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-          VERSION=$(echo "$TAG" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+$')
-          CHART="${TAG%-"${VERSION}"}"
-          echo "chart=${CHART}" >> "$GITHUB_OUTPUT"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-
-      - name: Validate chart exists
-        run: |
-          if [ ! -f "charts/${{ steps.parse.outputs.chart }}/Chart.yaml" ]; then
-            echo "::error::Chart directory charts/${{ steps.parse.outputs.chart }} not found"
-            exit 1
-          fi
-
-      - name: Validate chart version matches tag
-        run: |
-          CHART_VERSION=$(grep '^version:' "charts/${{ steps.parse.outputs.chart }}/Chart.yaml" | awk '{print $2}')
-          if [ "$CHART_VERSION" != "${{ steps.parse.outputs.version }}" ]; then
-            echo "::error::Tag version (${{ steps.parse.outputs.version }}) does not match Chart.yaml version ($CHART_VERSION)"
-            exit 1
-          fi
-
-      - name: Login to GHCR
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
-
-      - name: Package chart
-        run: helm package "charts/${{ steps.parse.outputs.chart }}"
-
-      - name: Push to OCI registry
-        run: helm push "${{ steps.parse.outputs.chart }}-${{ steps.parse.outputs.version }}.tgz" oci://ghcr.io/kitstream/helms
-
       - name: Install oras
         uses: oras-project/setup-oras@v1
 
-      - name: Login to GHCR (oras)
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
-
-      - name: Push ArtifactHub metadata
+      - name: Detect changed charts and release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          oras push "ghcr.io/kitstream/helms/${{ steps.parse.outputs.chart }}:artifacthub.io" \
-            --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
-            artifacthub-repo.yml:application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml
+          released=0
+          for chart_yaml in charts/*/Chart.yaml; do
+            chart_dir=$(dirname "$chart_yaml")
+            chart_name=$(basename "$chart_dir")
+            version=$(grep '^version:' "$chart_yaml" | awk '{print $2}')
+            tag="${chart_name}-${version}"
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: "${{ steps.parse.outputs.chart }}-${{ steps.parse.outputs.version }}.tgz"
-          generate_release_notes: true
+            # Skip if tag already exists (idempotent)
+            if git rev-parse "refs/tags/${tag}" >/dev/null 2>&1; then
+              echo "Tag ${tag} already exists — skipping ${chart_name}"
+              continue
+            fi
+
+            # Check if Chart.yaml was actually changed in this push
+            if ! git diff HEAD~1 --name-only -- "$chart_yaml" | grep -q .; then
+              echo "Chart.yaml not changed for ${chart_name} — skipping"
+              continue
+            fi
+
+            echo "::group::Releasing ${chart_name} v${version}"
+
+            # Login to GHCR
+            echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+            # Package chart
+            helm package "$chart_dir"
+
+            # Push to OCI registry
+            helm push "${chart_name}-${version}.tgz" oci://ghcr.io/kitstream/helms
+
+            # Push ArtifactHub metadata
+            echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+            oras push "ghcr.io/kitstream/helms/${chart_name}:artifacthub.io" \
+              --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
+              artifacthub-repo.yml:application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml
+
+            # Create git tag
+            git tag "$tag"
+            git push origin "$tag"
+
+            # Create GitHub Release
+            gh release create "$tag" \
+              --title "$tag" \
+              --generate-notes \
+              "${chart_name}-${version}.tgz"
+
+            echo "::endgroup::"
+            released=$((released + 1))
+          done
+
+          echo "Released ${released} chart(s)"
