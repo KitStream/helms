@@ -466,16 +466,26 @@ The script is idempotent: it skips creation if the objects already exist.
 #!/bin/sh
 set -eu
 
-apk add --no-cache curl python3 >/dev/null 2>&1 || true
+# Uses only busybox tools (wget, grep, sed) — no apk install needed.
+# This allows running as non-root with readOnlyRootFilesystem.
 
 SVC_URL="http://{{ include "netbird.server.fullname" . }}:{{ .Values.server.service.port }}"
+AUTH_HEADER="Authorization: Token $PAT_TOKEN"
+
+# Helper: HTTP GET returning body on stdout
+api_get() {
+  wget -q -O - --header "$AUTH_HEADER" "$SVC_URL$1" 2>/dev/null
+}
+
+# Helper: HTTP POST returning body on stdout
+api_post() {
+  wget -q -O - --header "$AUTH_HEADER" --header "Content-Type: application/json" \
+    --post-data "$2" "$SVC_URL$1" 2>/dev/null
+}
 
 echo "==> Waiting for NetBird API to accept PAT authentication..."
 for i in $(seq 1 60); do
-  HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' \
-    -H "Authorization: Token $PAT_TOKEN" \
-    "$SVC_URL/api/groups" 2>/dev/null) || true
-  if [ "$HTTP_CODE" = "200" ]; then
+  if api_get "/api/groups" >/dev/null 2>&1; then
     break
   fi
   if [ "$i" -eq 60 ]; then
@@ -486,26 +496,16 @@ for i in $(seq 1 60); do
 done
 
 echo "==> Checking for existing All group..."
-GROUPS=$(curl -s -H "Authorization: Token $PAT_TOKEN" "$SVC_URL/api/groups")
-ALL_GROUP_ID=$(echo "$GROUPS" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
-# Check if any group named "All" exists
+GROUPS=$(api_get "/api/groups")
 if echo "$GROUPS" | grep -q '"name":"All"'; then
-  ALL_GROUP_ID=$(echo "$GROUPS" | python3 -c "
-import sys,json
-groups=json.load(sys.stdin)
-for g in groups:
-    if g['name']=='All':
-        print(g['id']); break
-" 2>/dev/null) || true
+  # Extract id of the All group using grep/sed
+  # JSON is an array of objects; find the one with name "All" and grab its id
+  ALL_GROUP_ID=$(echo "$GROUPS" | sed 's/},{/}\n{/g' | grep '"name":"All"' | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
   echo "All group already exists (id: $ALL_GROUP_ID)"
 else
   echo "==> Creating All group via API..."
-  ALL_RESP=$(curl -s -X POST \
-    -H "Authorization: Token $PAT_TOKEN" \
-    -H "Content-Type: application/json" \
-    "$SVC_URL/api/groups" \
-    -d '{"name":"All"}')
-  ALL_GROUP_ID=$(echo "$ALL_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+  ALL_RESP=$(api_post "/api/groups" '{"name":"All"}')
+  ALL_GROUP_ID=$(echo "$ALL_RESP" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
   echo "Created All group (id: $ALL_GROUP_ID)"
 fi
 
@@ -515,21 +515,15 @@ if [ -z "$ALL_GROUP_ID" ]; then
 fi
 
 echo "==> Checking for existing default policy..."
-POLICIES=$(curl -s -H "Authorization: Token $PAT_TOKEN" "$SVC_URL/api/policies")
+POLICIES=$(api_get "/api/policies")
 if echo "$POLICIES" | grep -q '"name":"Default"'; then
   echo "Default policy already exists — skipping"
 else
   echo "==> Creating default allow-all policy via API..."
   POLICY_BODY="{\"name\":\"Default\",\"description\":\"Default policy allowing all connections\",\"enabled\":true,\"rules\":[{\"name\":\"Default\",\"description\":\"Allow all connections\",\"enabled\":true,\"action\":\"accept\",\"bidirectional\":true,\"protocol\":\"all\",\"sources\":[\"$ALL_GROUP_ID\"],\"destinations\":[\"$ALL_GROUP_ID\"]}]}"
-  POL_RESP=$(curl -s -w "\n%{http_code}" -X POST \
-    -H "Authorization: Token $PAT_TOKEN" \
-    -H "Content-Type: application/json" \
-    "$SVC_URL/api/policies" \
-    -d "$POLICY_BODY")
-  POL_HTTP=$(echo "$POL_RESP" | tail -1)
-  if [ "$POL_HTTP" != "200" ]; then
-    echo "FATAL: Failed to create default policy (HTTP $POL_HTTP)"
-    echo "$POL_RESP" | sed '$d'
+  POL_RESP=$(api_post "/api/policies" "$POLICY_BODY")
+  if [ -z "$POL_RESP" ]; then
+    echo "FATAL: Failed to create default policy"
     exit 1
   fi
   echo "Created default policy"

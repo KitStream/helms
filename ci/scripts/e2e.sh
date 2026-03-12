@@ -313,6 +313,30 @@ kubectl -n "$NAMESPACE" wait --for=jsonpath='{.status.phase}'=Succeeded pod/pat-
 log "PAT test pod logs:"
 kubectl -n "$NAMESPACE" logs pat-test || true
 
+# ── Wait for API provisioning (All group + default policy) ───────────
+# The api-provision sidecar/container creates these via REST API after
+# the DB seed completes. For SQLite (sidecar), this runs asynchronously
+# so we need to poll until the All group appears.
+log "Waiting for API provisioning to complete (All group)..."
+kubectl -n "$NAMESPACE" run provision-check --image=alpine:3.20 --restart=Never --rm -i \
+  --command -- sh -c "
+    for i in \$(seq 1 60); do
+      GROUPS=\$(wget -q -O - --header 'Authorization: Token $PAT_TOKEN' '$SVC_URL/api/groups' 2>/dev/null) || true
+      if echo \"\$GROUPS\" | grep -q '\"name\":\"All\"'; then
+        echo 'All group is ready'
+        exit 0
+      fi
+      sleep 5
+    done
+    echo 'TIMEOUT: All group not found'
+    exit 1
+  " || {
+  log "API provisioning logs (api-provision sidecar):"
+  kubectl -n "$NAMESPACE" logs deployment/"$RELEASE"-server -c api-provision 2>/dev/null || true
+  fail "API provisioning did not complete within timeout — All group not found"
+}
+log "API provisioning complete"
+
 # ── Peer join test: create setup key → join peer → verify ────────────
 log "Testing peer registration flow..."
 

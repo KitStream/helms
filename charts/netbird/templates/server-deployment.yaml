@@ -191,7 +191,7 @@ spec:
         - name: api-provision
           restartPolicy: Always
           image: alpine:3.20
-          command: ["sh", "-c", "sh /spec/provision.sh && sleep infinity"]
+          command: ["sh", "-c", "sh /spec/provision.sh; sleep infinity"]
           env:
             - name: PAT_TOKEN
               valueFrom:
@@ -201,7 +201,7 @@ spec:
           securityContext:
             runAsNonRoot: true
             runAsUser: 65534
-            readOnlyRootFilesystem: false
+            readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
             capabilities:
               drop: [ALL]
