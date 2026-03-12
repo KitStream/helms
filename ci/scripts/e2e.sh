@@ -491,24 +491,39 @@ kubectl -n "$NAMESPACE" run peer-verify --image=alpine:3.20 --restart=Never \
     fi
     echo "PASS: Found $PEER_COUNT registered peers"
 
-    # Verify both peers are in the All group (proves group assignment works)
-    echo "==> Checking group membership..."
+    # Verify both peers are in the All group and can see each other.
+    # NOTE: The /api/peers list endpoint hardcodes accessible_peers_count=0
+    # (see peers_handler.go in NetBird source). The real count is only
+    # available via /api/peers/{id}/accessible-peers, so we use that.
+    echo "==> Checking group membership and accessible peers..."
     FAILED=0
     for i in $(seq 0 $((PEER_COUNT - 1))); do
+      PEER_ID=$(echo "$PEERS" | jq -r ".[$i].id")
       HOSTNAME=$(echo "$PEERS" | jq -r ".[$i].hostname // .[$i].name // \"peer-$i\"")
       IN_ALL=$(echo "$PEERS" | jq -r ".[$i].groups[] | select(.name==\"All\") | .name")
-      ACCESSIBLE=$(echo "$PEERS" | jq -r ".[$i].accessible_peers_count // 0")
-      echo "Peer $HOSTNAME: in_all_group=$([ -n "$IN_ALL" ] && echo yes || echo no) accessible_peers_count=$ACCESSIBLE"
+      CONNECTED=$(echo "$PEERS" | jq -r ".[$i].connected")
+
+      # Fetch the real accessible peers count via the per-peer endpoint
+      AP=$(curl -s \
+        -H "Authorization: Token $PAT_TOKEN" \
+        "$SVC_URL/api/peers/$PEER_ID/accessible-peers")
+      ACCESSIBLE=$(echo "$AP" | jq "length")
+
+      echo "Peer $HOSTNAME: in_all_group=$([ -n "$IN_ALL" ] && echo yes || echo no) accessible_peers=$ACCESSIBLE connected=$CONNECTED"
       if [ -z "$IN_ALL" ]; then
         echo "FAIL: Peer $HOSTNAME is not in the All group"
         FAILED=1
       fi
+      if [ "$ACCESSIBLE" -lt 1 ] 2>/dev/null; then
+        echo "FAIL: Peer $HOSTNAME has $ACCESSIBLE accessible peers (expected > 0)"
+        FAILED=1
+      fi
     done
     if [ "$FAILED" -eq 1 ]; then
-      echo "FAIL: Not all peers are in the All group"
+      echo "FAIL: Not all peers passed verification"
       exit 1
     fi
-    echo "PASS: All peers are in the All group with default policy applied"
+    echo "PASS: All peers are in the All group with accessible peers > 0"
   '
 
 log "Waiting for peer-verify pod..."

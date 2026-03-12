@@ -21,7 +21,9 @@ server:
     type: ClusterIP
 
   config:
-    exposedAddress: "https://netbird.localhost"
+    # Use the in-cluster service address so peers can reach the signal
+    # and management gRPC endpoints without an ingress controller.
+    exposedAddress: "http://netbird-e2e-server.netbird-e2e.svc.cluster.local:80"
     auth:
       issuer: "https://auth.localhost"
       dashboardRedirectURIs:
