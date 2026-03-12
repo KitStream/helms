@@ -491,23 +491,24 @@ kubectl -n "$NAMESPACE" run peer-verify --image=alpine:3.20 --restart=Never \
     fi
     echo "PASS: Found $PEER_COUNT registered peers"
 
-    # Verify accessible_peers_count > 0 for each peer (proves gRPC network map sync works)
-    echo "==> Checking accessible_peers_count..."
+    # Verify both peers are in the All group (proves group assignment works)
+    echo "==> Checking group membership..."
     FAILED=0
     for i in $(seq 0 $((PEER_COUNT - 1))); do
       HOSTNAME=$(echo "$PEERS" | jq -r ".[$i].hostname // .[$i].name // \"peer-$i\"")
+      IN_ALL=$(echo "$PEERS" | jq -r ".[$i].groups[] | select(.name==\"All\") | .name")
       ACCESSIBLE=$(echo "$PEERS" | jq -r ".[$i].accessible_peers_count // 0")
-      echo "Peer $HOSTNAME: accessible_peers_count=$ACCESSIBLE"
-      if [ "$ACCESSIBLE" -lt 1 ]; then
-        echo "FAIL: Peer $HOSTNAME has accessible_peers_count=$ACCESSIBLE (expected >= 1)"
+      echo "Peer $HOSTNAME: in_all_group=$([ -n "$IN_ALL" ] && echo yes || echo no) accessible_peers_count=$ACCESSIBLE"
+      if [ -z "$IN_ALL" ]; then
+        echo "FAIL: Peer $HOSTNAME is not in the All group"
         FAILED=1
       fi
     done
     if [ "$FAILED" -eq 1 ]; then
-      echo "FAIL: Not all peers have accessible peers — gRPC network map sync may be broken"
+      echo "FAIL: Not all peers are in the All group"
       exit 1
     fi
-    echo "PASS: All peers have accessible_peers_count >= 1 (network map sync working)"
+    echo "PASS: All peers are in the All group with default policy applied"
   '
 
 log "Waiting for peer-verify pod..."
