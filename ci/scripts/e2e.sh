@@ -402,17 +402,18 @@ if [ -z "$SETUP_KEY" ]; then
 fi
 log "Using setup key: ${SETUP_KEY:0:8}..."
 
-# Step 3: Run a NetBird client pod that registers using the setup key.
+# Step 3: Run two NetBird client pods that register using the setup key.
 # The official netbird image uses an entrypoint script that starts the
 # daemon service and then runs "netbird up". We pass the setup key and
 # management URL via environment variables that the entrypoint reads.
 MGMT_URL="http://$RELEASE-server.$NAMESPACE.svc.cluster.local:80"
-log "Starting NetBird peer pod..."
+log "Starting two NetBird peer pods..."
+for PEER_INDEX in 1 2; do
 cat <<PEER_EOF | kubectl -n "$NAMESPACE" apply -f -
 apiVersion: v1
 kind: Pod
 metadata:
-  name: netbird-peer
+  name: netbird-peer-${PEER_INDEX}
 spec:
   restartPolicy: Never
   containers:
@@ -426,23 +427,27 @@ spec:
         - name: NB_LOG_FILE
           value: "console"
         - name: NB_HOSTNAME
-          value: "e2e-test-peer"
+          value: "e2e-test-peer-${PEER_INDEX}"
       securityContext:
         capabilities:
           add: ["NET_ADMIN", "NET_RAW", "BPF"]
 PEER_EOF
+done
 
-log "Waiting for netbird-peer pod to start (up to 90s)..."
-kubectl -n "$NAMESPACE" wait --for=condition=Ready pod/netbird-peer --timeout=90s 2>/dev/null || true
+log "Waiting for peer pods to start (up to 90s)..."
+kubectl -n "$NAMESPACE" wait --for=condition=Ready pod/netbird-peer-1 --timeout=90s 2>/dev/null || true
+kubectl -n "$NAMESPACE" wait --for=condition=Ready pod/netbird-peer-2 --timeout=90s 2>/dev/null || true
 
-# Give it time to register with the management server
+# Give peers time to register and sync network maps
 sleep 30
 
-log "NetBird peer logs (last 40 lines):"
-kubectl -n "$NAMESPACE" logs netbird-peer 2>/dev/null | tail -40 || true
+log "NetBird peer-1 logs (last 40 lines):"
+kubectl -n "$NAMESPACE" logs netbird-peer-1 2>/dev/null | tail -40 || true
+log "NetBird peer-2 logs (last 40 lines):"
+kubectl -n "$NAMESPACE" logs netbird-peer-2 2>/dev/null | tail -40 || true
 
-# Step 4: Verify peer appears in the management API
-log "Verifying peer registration via API..."
+# Step 4: Verify both peers are registered and can see each other
+log "Verifying peer registration and network map sync..."
 kubectl -n "$NAMESPACE" run peer-verify --image=alpine:3.20 --restart=Never \
   --env="PAT_TOKEN=$PAT_TOKEN" \
   --env="SVC_URL=$SVC_URL" \
@@ -453,29 +458,46 @@ kubectl -n "$NAMESPACE" run peer-verify --image=alpine:3.20 --restart=Never \
     PEERS=$(curl -s \
       -H "Authorization: Token $PAT_TOKEN" \
       "$SVC_URL/api/peers")
-    echo "Peers response: $(echo "$PEERS" | jq "." | head -c 1000)"
+    echo "Peers response: $(echo "$PEERS" | jq "." | head -c 2000)"
     PEER_COUNT=$(echo "$PEERS" | jq "length")
     echo "Peer count: $PEER_COUNT"
-    if [ "$PEER_COUNT" -ge 1 ]; then
-      PEER_NAME=$(echo "$PEERS" | jq -r ".[0].hostname // .[0].name // \"unknown\"")
-      echo "PASS: Found registered peer: $PEER_NAME"
-      exit 0
-    else
-      echo "FAIL: No peers registered"
+    if [ "$PEER_COUNT" -lt 2 ]; then
+      echo "FAIL: Expected at least 2 peers, got $PEER_COUNT"
       exit 1
     fi
+    echo "PASS: Found $PEER_COUNT registered peers"
+
+    # Verify accessible_peers_count > 0 for each peer (proves gRPC network map sync works)
+    echo "==> Checking accessible_peers_count..."
+    FAILED=0
+    for i in $(seq 0 $((PEER_COUNT - 1))); do
+      HOSTNAME=$(echo "$PEERS" | jq -r ".[$i].hostname // .[$i].name // \"peer-$i\"")
+      ACCESSIBLE=$(echo "$PEERS" | jq -r ".[$i].accessible_peers_count // 0")
+      echo "Peer $HOSTNAME: accessible_peers_count=$ACCESSIBLE"
+      if [ "$ACCESSIBLE" -lt 1 ]; then
+        echo "FAIL: Peer $HOSTNAME has accessible_peers_count=$ACCESSIBLE (expected >= 1)"
+        FAILED=1
+      fi
+    done
+    if [ "$FAILED" -eq 1 ]; then
+      echo "FAIL: Not all peers have accessible peers — gRPC network map sync may be broken"
+      exit 1
+    fi
+    echo "PASS: All peers have accessible_peers_count >= 1 (network map sync working)"
   '
 
 log "Waiting for peer-verify pod..."
 kubectl -n "$NAMESPACE" wait --for=condition=Ready pod/peer-verify --timeout=60s 2>/dev/null || true
-kubectl -n "$NAMESPACE" wait --for=jsonpath='{.status.phase}'=Succeeded pod/peer-verify --timeout=60s || {
+kubectl -n "$NAMESPACE" wait --for=jsonpath='{.status.phase}'=Succeeded pod/peer-verify --timeout=120s || {
   log "peer-verify pod logs:"
   kubectl -n "$NAMESPACE" logs peer-verify || true
-  log "netbird-peer logs (last 50 lines):"
-  kubectl -n "$NAMESPACE" logs netbird-peer 2>/dev/null | tail -50 || true
-  fail "Peer registration verification failed"
+  log "netbird-peer-1 logs (last 50 lines):"
+  kubectl -n "$NAMESPACE" logs netbird-peer-1 2>/dev/null | tail -50 || true
+  log "netbird-peer-2 logs (last 50 lines):"
+  kubectl -n "$NAMESPACE" logs netbird-peer-2 2>/dev/null | tail -50 || true
+  fail "Peer verification failed"
 }
 log "peer-verify pod logs:"
 kubectl -n "$NAMESPACE" logs peer-verify || true
 
-log "E2E test with $BACKEND backend PASSED (including PAT seeding and peer registration)!"
+log "E2E test with $BACKEND backend PASSED (including PAT seeding, peer registration, and network map sync)!"
