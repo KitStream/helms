@@ -142,9 +142,9 @@ tests:
           path: spec.template.spec.initContainers[0].securityContext.readOnlyRootFilesystem
           value: true
 
-  # ── Main container: pat-seed ─────────────────────────────────────────
+  # ── Init container: db-seed ──────────────────────────────────────────
 
-  - it: should have pat-seed container using initium
+  - it: should have db-seed init container using initium
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
@@ -155,13 +155,13 @@ tests:
       database.passwordSecret.secretName: pg-secret
     asserts:
       - equal:
-          path: spec.template.spec.containers[0].name
-          value: pat-seed
+          path: spec.template.spec.initContainers[1].name
+          value: db-seed
       - equal:
-          path: spec.template.spec.containers[0].image
+          path: spec.template.spec.initContainers[1].image
           value: "ghcr.io/kitstream/initium:1.2.0"
 
-  - it: should inject PAT_TOKEN env var from secret
+  - it: should inject PAT_TOKEN into db-seed init container
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
@@ -173,7 +173,7 @@ tests:
       database.passwordSecret.secretName: pg-secret
     asserts:
       - contains:
-          path: spec.template.spec.containers[0].env
+          path: spec.template.spec.initContainers[1].env
           content:
             name: PAT_TOKEN
             valueFrom:
@@ -193,7 +193,7 @@ tests:
       database.passwordSecret.secretKey: dbpass
     asserts:
       - contains:
-          path: spec.template.spec.containers[0].env
+          path: spec.template.spec.initContainers[1].env
           content:
             name: DB_PASSWORD
             valueFrom:
@@ -212,7 +212,7 @@ tests:
       database.passwordSecret.secretName: mysql-secret
     asserts:
       - contains:
-          path: spec.template.spec.containers[0].env
+          path: spec.template.spec.initContainers[1].env
           content:
             name: DB_PASSWORD
             valueFrom:
@@ -220,7 +220,46 @@ tests:
                 name: mysql-secret
                 key: password
 
-  - it: should mount config volume
+  # ── Main container: api-provision ──────────────────────────────────
+
+  - it: should have api-provision container using alpine
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: api-provision
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "alpine:3.20"
+
+  - it: should inject PAT_TOKEN into api-provision container
+    set:
+      pat.enabled: true
+      pat.secret.secretName: my-pat-secret
+      pat.secret.tokenKey: myTokenKey
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PAT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: my-pat-secret
+                key: myTokenKey
+
+  - it: should mount config volume on api-provision
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
@@ -237,23 +276,7 @@ tests:
             mountPath: /spec
             readOnly: true
 
-  - it: should not mount data volume for postgresql
-    set:
-      pat.enabled: true
-      pat.secret.secretName: my-pat-secret
-      database.type: postgresql
-      database.host: pg.example.com
-      database.user: netbird
-      database.name: netbird
-      database.passwordSecret.secretName: pg-secret
-    asserts:
-      - notContains:
-          path: spec.template.spec.containers[0].volumeMounts
-          content:
-            name: data
-            mountPath: /var/lib/netbird
-
-  - it: should run non-root for external databases
+  - it: should run api-provision non-root
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret

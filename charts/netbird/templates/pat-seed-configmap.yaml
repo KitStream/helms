@@ -27,4 +27,6 @@ metadata:
 data:
   pat-seed.yaml: |
     {{- include "netbird.pat.seedSpec" . | nindent 4 }}
+  provision.sh: |
+    {{- include "netbird.pat.provisionScript" . | nindent 4 }}
 {{- end }}

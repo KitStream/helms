@@ -1,6 +1,7 @@
 {{/*
-Post-install/post-upgrade Job - seeds a Personal Access Token into the
-NetBird database via Initium seed command.
+Post-install/post-upgrade Job — seeds account, user, and PAT into the
+database via Initium, then provisions the "All" group and default policy
+via the NetBird REST API.
 
 Only rendered for external databases (PostgreSQL/MySQL) where the seed
 connects over the network. For SQLite the seed runs as a sidecar container
@@ -56,8 +57,7 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: [ALL]
-      containers:
-        - name: pat-seed
+        - name: db-seed
           image: "{{ .Values.server.initImage.repository }}:{{ .Values.server.initImage.tag }}"
           args:
             - seed
@@ -74,6 +74,27 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.database.passwordSecret.secretName }}
                   key: {{ .Values.database.passwordSecret.secretKey }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: config
+              mountPath: /spec
+              readOnly: true
+      containers:
+        - name: api-provision
+          image: alpine:3.20
+          command: ["sh", "/spec/provision.sh"]
+          env:
+            - name: PAT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.pat.secret.secretName }}
+                  key: {{ .Values.pat.secret.tokenKey }}
           securityContext:
             runAsNonRoot: true
             runAsUser: 65534

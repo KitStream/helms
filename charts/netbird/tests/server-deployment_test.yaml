@@ -349,7 +349,7 @@ tests:
           path: spec.template.spec.containers
           count: 1
 
-  - it: should add pat-seed native sidecar as init container for sqlite
+  - it: should add pat-seed and api-provision native sidecars as init containers for sqlite
     set:
       pat.enabled: true
       pat.secret.secretName: my-pat-secret
@@ -357,13 +357,16 @@ tests:
     asserts:
       - lengthEqual:
           path: spec.template.spec.initContainers
-          count: 2
+          count: 3
       - equal:
           path: spec.template.spec.initContainers[0].name
           value: config-init
       - equal:
           path: spec.template.spec.initContainers[1].name
           value: pat-seed
+      - equal:
+          path: spec.template.spec.initContainers[2].name
+          value: api-provision
 
   - it: should set restartPolicy Always on pat-seed native sidecar
     set:
