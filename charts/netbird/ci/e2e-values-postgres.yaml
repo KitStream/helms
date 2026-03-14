@@ -2,6 +2,8 @@
 #
 # The e2e script deploys postgres via a simple Deployment + Service
 # and creates the password secret before chart install.
+# The PostgreSQL instance starts WITHOUT a "netbird" database so
+# that Initium's create_if_missing path is exercised.
 
 database:
   type: postgresql
