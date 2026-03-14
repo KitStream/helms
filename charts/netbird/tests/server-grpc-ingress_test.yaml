@@ -47,7 +47,7 @@ tests:
     asserts:
       - matchRegex:
           path: metadata.name
-          pattern: '-grpc$'
+          pattern: "-grpc$"
 
   - it: should set TLS
     set:
@@ -64,7 +64,3 @@ tests:
       - equal:
           path: spec.tls[0].secretName
           value: netbird-tls
-
-
-
-

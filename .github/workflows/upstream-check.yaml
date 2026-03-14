@@ -3,11 +3,11 @@ name: Upstream Version Check
 on:
   schedule:
     # Run daily at 08:00 UTC.
-    - cron: '0 8 * * *'
+    - cron: "0 8 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Preview changes without creating an issue'
+        description: "Preview changes without creating an issue"
         type: boolean
         default: false
 

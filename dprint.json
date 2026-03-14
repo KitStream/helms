@@ -1,8 +1,10 @@
 {
   "markdown": {},
-  "includes": ["**/*.md"],
-  "excludes": ["**/node_modules"],
+  "yaml": {},
+  "includes": ["**/*.md", "**/*.yaml", "**/*.yml"],
+  "excludes": ["**/node_modules", "charts/*/templates/**"],
   "plugins": [
-    "https://plugins.dprint.dev/markdown-0.17.8.wasm"
+    "https://plugins.dprint.dev/markdown-0.17.8.wasm",
+    "https://plugins.dprint.dev/g-plane/pretty_yaml-v0.6.0.wasm"
   ]
 }

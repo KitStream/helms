@@ -24,7 +24,7 @@ database:
   port: 5432
   user: netbird
   name: netbird
-  sslMode: disable          # Options: disable, require, verify-ca, verify-full
+  sslMode: disable # Options: disable, require, verify-ca, verify-full
   passwordSecret:
     secretName: netbird-db-password
     secretKey: password
@@ -62,4 +62,3 @@ dashboard:
     authAuthority: "https://auth.example.com"
     authClientId: "netbird-dashboard"
     authAudience: "netbird-dashboard"
-

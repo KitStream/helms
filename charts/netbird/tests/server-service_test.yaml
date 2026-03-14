@@ -52,4 +52,3 @@ tests:
           content:
             app.kubernetes.io/name: netbird
             app.kubernetes.io/component: server
-

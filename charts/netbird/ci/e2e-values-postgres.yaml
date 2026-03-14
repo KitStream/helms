@@ -53,4 +53,3 @@ dashboard:
     authAuthority: "https://auth.localhost"
     authClientId: "test-client"
     authAudience: "test-audience"
-

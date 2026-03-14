@@ -251,7 +251,6 @@ pat:
   # -- PAT expiration in days from the time of deployment.
   expirationDays: 365
 
-
 # Combined NetBird Server (Management + Signal + Relay + STUN)
 # =============================================================================
 server:
@@ -530,5 +529,3 @@ dashboard:
       port: http
     initialDelaySeconds: 5
     periodSeconds: 10
-
-

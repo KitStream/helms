@@ -3,7 +3,6 @@ templates:
   - templates/pat-seed-job.yaml
 tests:
   # ── Not rendered when disabled ───────────────────────────────────────
-
   - it: should not render when pat.enabled is false
     asserts:
       - hasDocuments:
