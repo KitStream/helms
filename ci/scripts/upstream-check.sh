@@ -56,10 +56,12 @@ read_yaml() {
 }
 
 # Check whether an open issue already exists with the given title.
+# Uses label filtering instead of --search to avoid GitHub's text-search
+# tokeniser mangling special characters (e.g. →, version numbers).
 issue_exists_with_title() {
   local title="$1"
   local count
-  count=$(gh issue list --state open --search "$title" --json number,title \
+  count=$(gh issue list --state open --label autorelease --json title \
     --jq "[.[] | select(.title == \"$title\")] | length" 2>/dev/null || echo "0")
   [[ "$count" -gt 0 ]]
 }
