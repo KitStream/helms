@@ -19,17 +19,17 @@ spec:
     {{- range .Values.server.ingress.tls }}
     - secretName: {{ .secretName }}
       hosts:
-        {{- range .hosts }}
+      {{- range .hosts }}
         - {{ . | quote }}
-        {{- end }}
+      {{- end }}
     {{- end }}
   {{- end }}
   rules:
-    {{- range .Values.server.ingress.hosts }}
+  {{- range .Values.server.ingress.hosts }}
     - host: {{ .host | quote }}
       http:
         paths:
-          {{- range .paths }}
+    {{- range .paths }}
           - path: {{ .path }}
             pathType: {{ .pathType | default "ImplementationSpecific" }}
             backend:
@@ -37,7 +37,7 @@ spec:
                 name: {{ include "netbird.server.fullname" $ }}
                 port:
                   name: http
-          {{- end }}
     {{- end }}
+  {{- end }}
 {{- end }}
 

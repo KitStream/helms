@@ -17,8 +17,27 @@ jobs:
       - name: Install dprint
         run: curl -fsSL https://dprint.dev/install.sh | sh && echo "$HOME/.dprint/bin" >> "$GITHUB_PATH"
 
-      - name: Check formatting
+      - name: Check markdown formatting
         run: dprint check
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: false
+
+      - name: Install helmfmt
+        run: go install github.com/digitalstudium/helmfmt@latest
+
+      - name: Check Helm template formatting
+        run: |
+          for chart in charts/*/; do
+            helmfmt "$chart"
+          done
+          if ! git diff --exit-code -- 'charts/*/templates/'; then
+            echo "::error::Helm templates are not formatted. Run 'helmfmt charts/<chart>' locally."
+            exit 1
+          fi
 
   lint-and-unit-test:
     name: Lint & Unit Test

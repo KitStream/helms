@@ -9,8 +9,8 @@ in the server Deployment to share the same PVC (ReadWriteOnce PVCs do not
 support multi-pod attach).
 */}}
 {{- if .Values.pat.enabled }}
-{{- $isExternal := eq (include "netbird.database.isExternal" .) "true" }}
-{{- if $isExternal }}
+  {{- $isExternal := eq (include "netbird.database.isExternal" .) "true" }}
+  {{- if $isExternal }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -37,10 +37,10 @@ spec:
     spec:
       restartPolicy: OnFailure
       serviceAccountName: {{ include "netbird.serviceAccountName" . }}
-      {{- with (coalesce .Values.server.imagePullSecrets .Values.imagePullSecrets) }}
+    {{- with (coalesce .Values.server.imagePullSecrets .Values.imagePullSecrets) }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+    {{- end }}
       initContainers:
         - name: wait-server
           image: "{{ .Values.server.initImage.repository }}:{{ .Values.server.initImage.tag }}"
@@ -110,13 +110,13 @@ spec:
         - name: config
           configMap:
             name: {{ include "netbird.server.fullname" . }}-pat-seed
-      {{- with .Values.server.nodeSelector }}
+    {{- with .Values.server.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.server.tolerations }}
+    {{- end }}
+    {{- with .Values.server.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
-      {{- end }}
-{{- end }}
+    {{- end }}
+  {{- end }}
 {{- end }}

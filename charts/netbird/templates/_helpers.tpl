@@ -9,23 +9,23 @@ Expand the name of the chart.
 Create a default fully qualified app name.
 */}}
 {{- define "netbird.fullname" -}}
-{{- if .Values.fullnameOverride }}
+  {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- $name := default .Chart.Name .Values.nameOverride }}
-{{- if contains $name .Release.Name }}
+  {{- else }}
+    {{- $name := default .Chart.Name .Values.nameOverride }}
+    {{- if contains $name .Release.Name }}
 {{- .Release.Name | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
-{{- end }}
-{{- end }}
+    {{- else }}
+      {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+    {{- end }}
+  {{- end }}
 {{- end }}
 
 {{/*
 Chart label
 */}}
 {{- define "netbird.chart" -}}
-{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+  {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
@@ -40,7 +40,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/* ===== Server (combined) ===== */}}
 
 {{- define "netbird.server.fullname" -}}
-{{- printf "%s-server" (include "netbird.fullname" .) | trunc 63 | trimSuffix "-" }}
+  {{- printf "%s-server" (include "netbird.fullname" .) | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{- define "netbird.server.selectorLabels" -}}
@@ -57,7 +57,7 @@ app.kubernetes.io/component: server
 {{/* ===== Dashboard ===== */}}
 
 {{- define "netbird.dashboard.fullname" -}}
-{{- printf "%s-dashboard" (include "netbird.fullname" .) | trunc 63 | trimSuffix "-" }}
+  {{- printf "%s-dashboard" (include "netbird.fullname" .) | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{- define "netbird.dashboard.selectorLabels" -}}
@@ -75,11 +75,11 @@ app.kubernetes.io/component: dashboard
 Create the name of the service account to use
 */}}
 {{- define "netbird.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create }}
+  {{- if .Values.serviceAccount.create }}
 {{- default (include "netbird.fullname" .) .Values.serviceAccount.name }}
-{{- else }}
+  {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
-{{- end }}
+  {{- end }}
 {{- end }}
 
 {{/*
@@ -87,14 +87,14 @@ envFromSecret helper — renders valueFrom.secretKeyRef entries
 from a map of ENV_VAR: "secretName/secretKey"
 */}}
 {{- define "netbird.envFromSecret" -}}
-{{- range $envName, $ref := . }}
-{{- $parts := splitList "/" $ref }}
+  {{- range $envName, $ref := . }}
+    {{- $parts := splitList "/" $ref }}
 - name: {{ $envName }}
   valueFrom:
     secretKeyRef:
       name: {{ index $parts 0 }}
       key: {{ index $parts 1 }}
-{{- end }}
+  {{- end }}
 {{- end }}
 
 {{/*
@@ -109,30 +109,30 @@ render subcommand (envsubst mode) won't interpret user values.
 netbird.server.generatedSecretName — name of the auto-generated Secret.
 */}}
 {{- define "netbird.server.generatedSecretName" -}}
-{{- printf "%s-generated" (include "netbird.server.fullname" .) | trunc 63 | trimSuffix "-" }}
+  {{- printf "%s-generated" (include "netbird.server.fullname" .) | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 netbird.server.resolveSecretName — resolves the effective secret name.
 */}}
 {{- define "netbird.server.resolveSecretName" -}}
-{{- if .ref.secretName -}}
+  {{- if .ref.secretName -}}
 {{- .ref.secretName -}}
-{{- else if .ref.autoGenerate -}}
+  {{- else if .ref.autoGenerate -}}
 {{- .generated -}}
-{{- end -}}
+  {{- end -}}
 {{- end }}
 
 {{/* ===== Database helpers ===== */}}
 
 {{/*
 netbird.database.engine — maps database.type to the NetBird store engine name.
-  postgresql -> postgres, mysql -> mysql, sqlite -> sqlite
+postgresql -> postgres, mysql -> mysql, sqlite -> sqlite
 */}}
 {{- define "netbird.database.engine" -}}
-{{- if eq .Values.database.type "postgresql" -}}postgres
-{{- else -}}{{ .Values.database.type }}
-{{- end -}}
+  {{- if eq .Values.database.type "postgresql" -}}postgres
+  {{- else -}}{{ .Values.database.type }}
+  {{- end -}}
 {{- end }}
 
 {{/*
@@ -140,12 +140,12 @@ netbird.database.port — resolves the effective database port.
 Defaults to 5432 for postgresql, 3306 for mysql.
 */}}
 {{- define "netbird.database.port" -}}
-{{- if .Values.database.port -}}
+  {{- if .Values.database.port -}}
 {{- .Values.database.port -}}
-{{- else if eq .Values.database.type "postgresql" -}}5432
-{{- else if eq .Values.database.type "mysql" -}}3306
-{{- else -}}0
-{{- end -}}
+  {{- else if eq .Values.database.type "postgresql" -}}5432
+  {{- else if eq .Values.database.type "mysql" -}}3306
+  {{- else -}}0
+  {{- end -}}
 {{- end }}
 
 {{/*
@@ -160,33 +160,33 @@ netbird.database.isExternal — true when database.type is not sqlite.
 {{/*
 netbird.oidc.providerCredentialsKey — maps idpManager.managerType to the
 corresponding YAML key for provider-specific credentials in config.yaml.
-  auth0    -> auth0ClientCredentials
-  azure    -> azureClientCredentials
-  keycloak -> keycloakClientCredentials
-  zitadel  -> zitadelClientCredentials
-  (other)  -> <type>ClientCredentials
+auth0    -> auth0ClientCredentials
+azure    -> azureClientCredentials
+keycloak -> keycloakClientCredentials
+zitadel  -> zitadelClientCredentials
+(other)  -> <type>ClientCredentials
 */}}
 {{- define "netbird.oidc.providerCredentialsKey" -}}
-{{- if eq . "auth0" -}}auth0ClientCredentials
-{{- else if eq . "azure" -}}azureClientCredentials
-{{- else if eq . "keycloak" -}}keycloakClientCredentials
-{{- else if eq . "zitadel" -}}zitadelClientCredentials
-{{- else -}}{{ . }}ClientCredentials
-{{- end -}}
+  {{- if eq . "auth0" -}}auth0ClientCredentials
+  {{- else if eq . "azure" -}}azureClientCredentials
+  {{- else if eq . "keycloak" -}}keycloakClientCredentials
+  {{- else if eq . "zitadel" -}}zitadelClientCredentials
+  {{- else -}}{{ . }}ClientCredentials
+  {{- end -}}
 {{- end }}
 
 {{/*
 netbird.database.dsn — constructs the DSN string with ${DB_PASSWORD} placeholder.
-  postgresql: host=H user=U password=${DB_PASSWORD} dbname=D port=P sslmode=S
-  mysql:      U:${DB_PASSWORD}@tcp(H:P)/D
-  sqlite:     (empty string)
+postgresql: host=H user=U password=${DB_PASSWORD} dbname=D port=P sslmode=S
+mysql:      U:${DB_PASSWORD}@tcp(H:P)/D
+sqlite:     (empty string)
 */}}
 {{- define "netbird.database.dsn" -}}
-{{- if eq .Values.database.type "postgresql" -}}
+  {{- if eq .Values.database.type "postgresql" -}}
 host={{ .Values.database.host }} user={{ .Values.database.user }} password=${DB_PASSWORD} dbname={{ .Values.database.name }} port={{ include "netbird.database.port" . }} sslmode={{ .Values.database.sslMode }}
-{{- else if eq .Values.database.type "mysql" -}}
+  {{- else if eq .Values.database.type "mysql" -}}
 {{ .Values.database.user }}:${DB_PASSWORD}@tcp({{ .Values.database.host }}:{{ include "netbird.database.port" . }})/{{ .Values.database.name }}
-{{- end -}}
+  {{- end -}}
 {{- end }}
 
 {{/*
@@ -195,9 +195,9 @@ envsubst-style placeholders. Initium's render subcommand substitutes
 these at pod startup.
 
 Placeholders:
-  ${AUTH_SECRET}       <- server.secrets.authSecret
-  ${ENCRYPTION_KEY}    <- server.secrets.storeEncryptionKey
-  ${DB_PASSWORD}       <- database.passwordSecret (embedded in DSN, non-sqlite only)
+${AUTH_SECRET}       <- server.secrets.authSecret
+${ENCRYPTION_KEY}    <- server.secrets.storeEncryptionKey
+${DB_PASSWORD}       <- database.passwordSecret (embedded in DSN, non-sqlite only)
 */}}
 {{- define "netbird.server.configTemplate" -}}
 server:
@@ -216,24 +216,24 @@ server:
   auth:
     issuer: {{ include "netbird.escapeEnvsubst" .Values.server.config.auth.issuer | quote }}
     signKeyRefreshEnabled: {{ .Values.server.config.auth.signKeyRefreshEnabled }}
-    {{- if .Values.server.config.auth.dashboardRedirectURIs }}
+  {{- if .Values.server.config.auth.dashboardRedirectURIs }}
     dashboardRedirectURIs:
-      {{- range .Values.server.config.auth.dashboardRedirectURIs }}
+    {{- range .Values.server.config.auth.dashboardRedirectURIs }}
       - {{ include "netbird.escapeEnvsubst" . | quote }}
-      {{- end }}
     {{- end }}
-    {{- if .Values.server.config.auth.cliRedirectURIs }}
+  {{- end }}
+  {{- if .Values.server.config.auth.cliRedirectURIs }}
     cliRedirectURIs:
-      {{- range .Values.server.config.auth.cliRedirectURIs }}
+    {{- range .Values.server.config.auth.cliRedirectURIs }}
       - {{ include "netbird.escapeEnvsubst" . | quote }}
-      {{- end }}
     {{- end }}
+  {{- end }}
 
   store:
     engine: {{ include "netbird.database.engine" . | quote }}
     dsn: {{ if eq (include "netbird.database.isExternal" .) "true" }}"{{ include "netbird.database.dsn" . }}"{{ else }}""{{ end }}
     encryptionKey: "${ENCRYPTION_KEY}"
-{{- if .Values.oidc.enabled }}
+  {{- if .Values.oidc.enabled }}
 
   http:
     authAudience: {{ include "netbird.escapeEnvsubst" .Values.oidc.audience | quote }}
@@ -247,7 +247,7 @@ server:
     authKeysLocation: {{ include "netbird.escapeEnvsubst" . | quote }}
     {{- end }}
     idpSignKeyRefreshEnabled: {{ .Values.server.config.auth.signKeyRefreshEnabled }}
-{{- if .Values.oidc.deviceAuthFlow.enabled }}
+    {{- if .Values.oidc.deviceAuthFlow.enabled }}
 
   deviceAuthFlow:
     provider: {{ include "netbird.escapeEnvsubst" .Values.oidc.deviceAuthFlow.provider | quote }}
@@ -270,8 +270,8 @@ server:
       {{- end }}
       scope: {{ include "netbird.escapeEnvsubst" .Values.oidc.deviceAuthFlow.providerConfig.scope | quote }}
       useIdToken: {{ .Values.oidc.deviceAuthFlow.providerConfig.useIdToken }}
-{{- end }}
-{{- if .Values.oidc.pkceAuthFlow.enabled }}
+    {{- end }}
+    {{- if .Values.oidc.pkceAuthFlow.enabled }}
 
   pkceAuthFlow:
     providerConfig:
@@ -303,8 +303,8 @@ server:
       useIdToken: {{ .Values.oidc.pkceAuthFlow.providerConfig.useIdToken }}
       disablePromptLogin: {{ .Values.oidc.pkceAuthFlow.providerConfig.disablePromptLogin }}
       loginFlag: {{ .Values.oidc.pkceAuthFlow.providerConfig.loginFlag }}
-{{- end }}
-{{- if .Values.oidc.idpManager.enabled }}
+    {{- end }}
+    {{- if .Values.oidc.idpManager.enabled }}
 
   idpConfig:
     managerType: {{ include "netbird.escapeEnvsubst" .Values.oidc.idpManager.managerType | quote }}
@@ -314,16 +314,16 @@ server:
       clientId: {{ include "netbird.escapeEnvsubst" .Values.oidc.idpManager.clientConfig.clientId | quote }}
       clientSecret: "${IDP_CLIENT_SECRET}"
       grantType: {{ include "netbird.escapeEnvsubst" .Values.oidc.idpManager.clientConfig.grantType | quote }}
-    {{- with .Values.oidc.idpManager.extraConfig }}
+      {{- with .Values.oidc.idpManager.extraConfig }}
     extraConfig:
       {{- toYaml . | nindent 6 }}
-    {{- end }}
-    {{- with .Values.oidc.idpManager.providerConfig }}
+      {{- end }}
+      {{- with .Values.oidc.idpManager.providerConfig }}
     {{ include "netbird.oidc.providerCredentialsKey" $.Values.oidc.idpManager.managerType }}:
       {{- toYaml . | nindent 6 }}
+      {{- end }}
     {{- end }}
-{{- end }}
-{{- end }}
+  {{- end }}
 {{- end }}
 
 {{/*
@@ -343,10 +343,10 @@ database:
   user: {{ .Values.database.user }}
   password: "{{ "{{ env.DB_PASSWORD }}" }}"
   name: {{ .Values.database.name }}
-{{- if eq .Values.database.type "postgresql" }}
+  {{- if eq .Values.database.type "postgresql" }}
   options:
     sslmode: {{ .Values.database.sslMode }}
-{{- end }}
+  {{- end }}
 phases:
   - name: create-database
     database: {{ .Values.database.name }}
@@ -362,25 +362,25 @@ rule records.
 Seed sets use mode: reconcile so that value changes in the Helm chart
 are reflected in the database on upgrade.
 MiniJinja placeholders:
-  {{ env.PAT_TOKEN | sha256("bytes") | base64_encode }} — computes the
-  base64-encoded SHA256 hash from the plaintext PAT at seed time.
+{{ env.PAT_TOKEN | sha256("bytes") | base64_encode }} — computes the
+base64-encoded SHA256 hash from the plaintext PAT at seed time.
 */}}
 {{- define "netbird.pat.seedSpec" -}}
 database:
   driver: {{ include "netbird.database.engine" . }}
-{{- if eq .Values.database.type "sqlite" }}
+  {{- if eq .Values.database.type "sqlite" }}
   url: "/var/lib/netbird/store.db"
-{{- else }}
+  {{- else }}
   host: {{ .Values.database.host }}
   port: {{ include "netbird.database.port" . }}
   user: {{ .Values.database.user }}
   password: "{{ "{{ env.DB_PASSWORD }}" }}"
   name: {{ .Values.database.name }}
-{{- if eq .Values.database.type "postgresql" }}
+    {{- if eq .Values.database.type "postgresql" }}
   options:
     sslmode: {{ .Values.database.sslMode }}
-{{- end }}
-{{- end }}
+    {{- end }}
+  {{- end }}
 phases:
   - name: seed-pat
     order: 1

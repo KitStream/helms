@@ -19,17 +19,17 @@ spec:
     {{- range .Values.dashboard.ingress.tls }}
     - secretName: {{ .secretName }}
       hosts:
-        {{- range .hosts }}
+      {{- range .hosts }}
         - {{ . | quote }}
-        {{- end }}
+      {{- end }}
     {{- end }}
   {{- end }}
   rules:
-    {{- range .Values.dashboard.ingress.hosts }}
+  {{- range .Values.dashboard.ingress.hosts }}
     - host: {{ .host | quote }}
       http:
         paths:
-          {{- range .paths }}
+    {{- range .paths }}
           - path: {{ .path }}
             pathType: {{ .pathType | default "Prefix" }}
             backend:
@@ -37,7 +37,7 @@ spec:
                 name: {{ include "netbird.dashboard.fullname" $ }}
                 port:
                   name: http
-          {{- end }}
     {{- end }}
+  {{- end }}
 {{- end }}
 

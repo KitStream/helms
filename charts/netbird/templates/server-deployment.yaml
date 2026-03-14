@@ -14,34 +14,34 @@ spec:
     metadata:
       annotations:
         checksum/config: {{ include "netbird.server.configTemplate" . | sha256sum }}
-        {{- if and .Values.pat.enabled (eq .Values.database.type "sqlite") }}
+{{- if and .Values.pat.enabled (eq .Values.database.type "sqlite") }}
         checksum/pat-seed: {{ include "netbird.pat.seedSpec" . | sha256sum }}
-        {{- end }}
-        {{- with .Values.server.podAnnotations }}
+{{- end }}
+{{- with .Values.server.podAnnotations }}
         {{- toYaml . | nindent 8 }}
-        {{- end }}
+{{- end }}
       labels:
         {{- include "netbird.server.selectorLabels" . | nindent 8 }}
-        {{- with .Values.server.podLabels }}
+{{- with .Values.server.podLabels }}
         {{- toYaml . | nindent 8 }}
-        {{- end }}
+{{- end }}
     spec:
       serviceAccountName: {{ include "netbird.serviceAccountName" . }}
-      {{- with (coalesce .Values.server.imagePullSecrets .Values.imagePullSecrets) }}
+{{- with (coalesce .Values.server.imagePullSecrets .Values.imagePullSecrets) }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.server.podSecurityContext }}
+{{- end }}
+{{- with .Values.server.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- $generated := include "netbird.server.generatedSecretName" . }}
-      {{- $authSecretName := include "netbird.server.resolveSecretName" (dict "ref" .Values.server.secrets.authSecret "generated" $generated) }}
-      {{- $encKeySecretName := include "netbird.server.resolveSecretName" (dict "ref" .Values.server.secrets.storeEncryptionKey "generated" $generated) }}
-      {{- $isExternal := eq (include "netbird.database.isExternal" .) "true" }}
-      {{- $patSidecar := and .Values.pat.enabled (not $isExternal) }}
+{{- end }}
+{{- $generated := include "netbird.server.generatedSecretName" . }}
+{{- $authSecretName := include "netbird.server.resolveSecretName" (dict "ref" .Values.server.secrets.authSecret "generated" $generated) }}
+{{- $encKeySecretName := include "netbird.server.resolveSecretName" (dict "ref" .Values.server.secrets.storeEncryptionKey "generated" $generated) }}
+{{- $isExternal := eq (include "netbird.database.isExternal" .) "true" }}
+{{- $patSidecar := and .Values.pat.enabled (not $isExternal) }}
       initContainers:
-        {{- if $isExternal }}
+{{- if $isExternal }}
         # ── Wait for database to be reachable ──────────────────────────
         - name: db-wait
           image: "{{ .Values.server.initImage.repository }}:{{ .Values.server.initImage.tag }}"
@@ -82,7 +82,7 @@ spec:
             - name: config-tpl
               mountPath: /spec
               readOnly: true
-        {{- end }}
+{{- end }}
         # ── Render config template ─────────────────────────────────────
         - name: config-init
           image: "{{ .Values.server.initImage.repository }}:{{ .Values.server.initImage.tag }}"
@@ -97,47 +97,47 @@ spec:
           env:
             - name: DOLLAR
               value: "$"
-            {{- if $authSecretName }}
+{{- if $authSecretName }}
             - name: AUTH_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ $authSecretName }}
                   key: {{ .Values.server.secrets.authSecret.secretKey }}
-            {{- else }}
+{{- else }}
             - name: AUTH_SECRET
               value: ""
-            {{- end }}
-            {{- if $encKeySecretName }}
+{{- end }}
+{{- if $encKeySecretName }}
             - name: ENCRYPTION_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ $encKeySecretName }}
                   key: {{ .Values.server.secrets.storeEncryptionKey.secretKey }}
-            {{- else }}
+{{- else }}
             - name: ENCRYPTION_KEY
               value: ""
-            {{- end }}
-            {{- if $isExternal }}
+{{- end }}
+{{- if $isExternal }}
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.database.passwordSecret.secretName }}
                   key: {{ .Values.database.passwordSecret.secretKey }}
-            {{- end }}
-            {{- if and .Values.oidc.enabled .Values.oidc.idpManager.enabled .Values.oidc.idpManager.clientConfig.clientSecret.secretName }}
+{{- end }}
+{{- if and .Values.oidc.enabled .Values.oidc.idpManager.enabled .Values.oidc.idpManager.clientConfig.clientSecret.secretName }}
             - name: IDP_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.oidc.idpManager.clientConfig.clientSecret.secretName }}
                   key: {{ .Values.oidc.idpManager.clientConfig.clientSecret.secretKey }}
-            {{- end }}
-            {{- if and .Values.oidc.enabled .Values.oidc.pkceAuthFlow.enabled .Values.oidc.pkceAuthFlow.providerConfig.clientSecret.secretName }}
+{{- end }}
+{{- if and .Values.oidc.enabled .Values.oidc.pkceAuthFlow.enabled .Values.oidc.pkceAuthFlow.providerConfig.clientSecret.secretName }}
             - name: PKCE_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.oidc.pkceAuthFlow.providerConfig.clientSecret.secretName }}
                   key: {{ .Values.oidc.pkceAuthFlow.providerConfig.clientSecret.secretKey }}
-            {{- end }}
+{{- end }}
           securityContext:
             runAsNonRoot: true
             runAsUser: 65534
@@ -151,7 +151,7 @@ spec:
               readOnly: true
             - name: config-generated
               mountPath: /out
-        {{- if $patSidecar }}
+{{- if $patSidecar }}
         # ── PAT seed native sidecar (SQLite only) ────────────────────────
         # Declared as an init container with restartPolicy: Always, making
         # it a Kubernetes native sidecar (K8s 1.28+). It starts alongside
@@ -209,7 +209,7 @@ spec:
             - name: pat-seed-config
               mountPath: /spec
               readOnly: true
-        {{- end }}
+{{- end }}
       containers:
         - name: server
           image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag | default .Chart.AppVersion }}"
@@ -237,50 +237,50 @@ spec:
               readOnly: true
             - name: data
               mountPath: /var/lib/netbird
-          {{- with .Values.server.securityContext }}
+{{- with .Values.server.securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- with .Values.server.resources }}
+{{- end }}
+{{- with .Values.server.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- with .Values.server.livenessProbe }}
+{{- end }}
+{{- with .Values.server.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- with .Values.server.readinessProbe }}
+{{- end }}
+{{- with .Values.server.readinessProbe }}
           readinessProbe:
             {{- toYaml . | nindent 12 }}
-          {{- end }}
+{{- end }}
       volumes:
         - name: config-tpl
           configMap:
             name: {{ include "netbird.server.fullname" . }}
         - name: config-generated
           emptyDir: {}
-        {{- if $patSidecar }}
+{{- if $patSidecar }}
         - name: pat-seed-config
           configMap:
             name: {{ include "netbird.server.fullname" . }}-pat-seed
-        {{- end }}
+{{- end }}
         - name: data
-          {{- if .Values.server.persistentVolume.enabled }}
+{{- if .Values.server.persistentVolume.enabled }}
           persistentVolumeClaim:
             claimName: {{ include "netbird.server.fullname" . }}
-          {{- else }}
+{{- else }}
           emptyDir: {}
-          {{- end }}
-      {{- with .Values.server.nodeSelector }}
+{{- end }}
+{{- with .Values.server.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.server.affinity }}
+{{- end }}
+{{- with .Values.server.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.server.tolerations }}
+{{- end }}
+{{- with .Values.server.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+{{- end }}
 

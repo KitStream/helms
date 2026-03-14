@@ -7,7 +7,7 @@ Deployment). For external databases it remains a Helm hook so the seed Job
 can reference it during the post-install/post-upgrade phase.
 */}}
 {{- if .Values.pat.enabled }}
-{{- $isExternal := eq (include "netbird.database.isExternal" .) "true" }}
+  {{- $isExternal := eq (include "netbird.database.isExternal" .) "true" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
