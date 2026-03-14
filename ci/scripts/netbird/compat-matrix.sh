@@ -6,7 +6,7 @@
 # Each run fills the current chart version's row; older rows are preserved.
 #
 # Usage:
-#   ci/scripts/compat-matrix.sh
+#   ci/scripts/netbird/compat-matrix.sh
 #
 # Requires: helm, kubectl, gh, yq (or sed/grep for Chart.yaml parsing)
 #

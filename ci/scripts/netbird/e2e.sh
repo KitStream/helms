@@ -3,7 +3,7 @@
 # E2E test runner for the netbird Helm chart (with PAT seeding).
 #
 # Usage:
-#   ci/scripts/e2e.sh <backend>
+#   ci/scripts/netbird/e2e.sh <backend>
 #
 # Backends:
 #   sqlite   — default SQLite storage (no external DB)

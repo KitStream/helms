@@ -3,7 +3,7 @@
 # E2E test runner for the netbird Helm chart — OIDC integration.
 #
 # Usage:
-#   ci/scripts/e2e-oidc.sh <provider>
+#   ci/scripts/netbird/e2e-oidc.sh <provider>
 #
 # Providers:
 #   keycloak — Keycloak deployed in-cluster (quay.io/keycloak/keycloak:26.0)

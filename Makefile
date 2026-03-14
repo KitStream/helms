@@ -1,4 +1,4 @@
-.PHONY: lint unittest e2e e2e-sqlite e2e-postgres e2e-mysql e2e-oidc-keycloak e2e-oidc-zitadel e2e-keycloak-dev e2e-keycloak-postgres e2e-keycloak-replicas e2e-keycloak e2e-setup e2e-teardown test compat-matrix
+.PHONY: lint unittest e2e e2e-netbird e2e-sqlite e2e-postgres e2e-mysql e2e-oidc-keycloak e2e-oidc-zitadel e2e-keycloak e2e-keycloak-dev e2e-keycloak-postgres e2e-keycloak-replicas e2e-setup e2e-teardown test compat-matrix
 
 CHARTS := $(wildcard charts/*)
 
@@ -26,51 +26,53 @@ e2e-setup:
 	kind create cluster --name $(E2E_CLUSTER) --wait 60s 2>/dev/null || true
 	kubectl cluster-info --context kind-$(E2E_CLUSTER)
 
+# ── NetBird E2E ─────────────────────────────────────────────────────────
 e2e-sqlite: e2e-setup
-	ci/scripts/e2e.sh sqlite
+	ci/scripts/netbird/e2e.sh sqlite
 
 e2e-postgres: e2e-setup
-	ci/scripts/e2e.sh postgres
+	ci/scripts/netbird/e2e.sh postgres
 
 e2e-mysql: e2e-setup
-	ci/scripts/e2e.sh mysql
+	ci/scripts/netbird/e2e.sh mysql
 
 e2e-oidc-keycloak: e2e-setup
-	ci/scripts/e2e-oidc.sh keycloak
+	ci/scripts/netbird/e2e-oidc.sh keycloak
 
 e2e-oidc-zitadel: e2e-setup
-	ci/scripts/e2e-oidc.sh zitadel
+	ci/scripts/netbird/e2e-oidc.sh zitadel
 
+e2e-netbird: e2e-setup
+	ci/scripts/netbird/e2e.sh sqlite
+	ci/scripts/netbird/e2e.sh postgres
+	ci/scripts/netbird/e2e.sh mysql
+	ci/scripts/netbird/e2e-oidc.sh keycloak
+	ci/scripts/netbird/e2e-oidc.sh zitadel
+
+# ── Keycloak E2E ────────────────────────────────────────────────────────
 e2e-keycloak-dev: e2e-setup
-	ci/scripts/e2e-keycloak.sh dev
+	ci/scripts/keycloak/e2e.sh dev
 
 e2e-keycloak-postgres: e2e-setup
-	ci/scripts/e2e-keycloak.sh postgres
+	ci/scripts/keycloak/e2e.sh postgres
 
 e2e-keycloak-replicas: e2e-setup
-	ci/scripts/e2e-keycloak.sh replicas
+	ci/scripts/keycloak/e2e.sh replicas
 
 e2e-keycloak: e2e-setup
-	ci/scripts/e2e-keycloak.sh dev
-	ci/scripts/e2e-keycloak.sh postgres
-	ci/scripts/e2e-keycloak.sh replicas
+	ci/scripts/keycloak/e2e.sh dev
+	ci/scripts/keycloak/e2e.sh postgres
+	ci/scripts/keycloak/e2e.sh replicas
 
-e2e: e2e-setup
-	ci/scripts/e2e.sh sqlite
-	ci/scripts/e2e.sh postgres
-	ci/scripts/e2e.sh mysql
-	ci/scripts/e2e-oidc.sh keycloak
-	ci/scripts/e2e-oidc.sh zitadel
-	ci/scripts/e2e-keycloak.sh dev
-	ci/scripts/e2e-keycloak.sh postgres
-	ci/scripts/e2e-keycloak.sh replicas
+# ── All E2E ─────────────────────────────────────────────────────────────
+e2e: e2e-netbird e2e-keycloak
 
 e2e-teardown:
 	kind delete cluster --name $(E2E_CLUSTER) 2>/dev/null || true
 
 # ── Compatibility Matrix ──────────────────────────────────────────────
 compat-matrix: e2e-setup
-	ci/scripts/compat-matrix.sh
+	ci/scripts/netbird/compat-matrix.sh
 
 # ── Run all tests ──────────────────────────────────────────────────────
 test: lint unittest
