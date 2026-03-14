@@ -7,6 +7,19 @@ on:
     branches: [main]
 
 jobs:
+  format-check:
+    name: Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dprint
+        run: curl -fsSL https://dprint.dev/install.sh | sh && echo "$HOME/.dprint/bin" >> "$GITHUB_PATH"
+
+      - name: Check formatting
+        run: dprint check
+
   lint-and-unit-test:
     name: Lint & Unit Test
     runs-on: ubuntu-latest

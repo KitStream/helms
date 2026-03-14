@@ -55,6 +55,7 @@ When bringing in or upgrading a chart from the community:
 
 ### General Standards
 
+- Run `dprint fmt` to format markdown files before submitting.
 - Use `helm lint` to validate charts before submitting.
 - Use `helm template` to verify rendered manifests.
 - Follow [Kubernetes naming conventions](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/).
