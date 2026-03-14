@@ -2,7 +2,7 @@
 #
 # Compatibility matrix: test the current chart against recent NetBird server versions.
 #
-# Produces/updates docs/compatibility.md with a 2D table (chart minors × server minors).
+# Produces/updates charts/netbird/docs/compatibility.md with a 2D table (chart minors × server minors).
 # Each run fills the current chart version's row; older rows are preserved.
 #
 # Usage:
@@ -13,7 +13,7 @@
 set -uo pipefail
 
 CHART="charts/netbird"
-COMPAT_FILE="docs/compatibility.md"
+COMPAT_FILE="charts/netbird/docs/compatibility.md"
 NUM_MINORS=5
 
 log()  { echo "==> $*"; }
