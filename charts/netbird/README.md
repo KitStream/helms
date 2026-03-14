@@ -11,13 +11,14 @@ A Helm chart for deploying [NetBird](https://netbird.io) VPN management, signal,
 This chart deploys the NetBird self-hosted stack as two components:
 
 | Component     | Description                                                                                    |
-|---------------|------------------------------------------------------------------------------------------------|
+| ------------- | ---------------------------------------------------------------------------------------------- |
 | **Server**    | Combined binary running Management API, Signal, Relay, and STUN services on a single HTTP port |
 | **Dashboard** | Web UI for managing peers, groups, routes, and access policies                                 |
 
 The server uses a single `config.yaml` that is rendered from a ConfigMap template with sensitive values injected at pod startup from Kubernetes Secrets via [Initium](https://github.com/KitStream/initium)'s `render` subcommand (envsubst mode).
 
 For external databases (PostgreSQL, MySQL), the chart automatically:
+
 1. **Waits** for the database to be reachable (`initium wait-for`)
 2. **Creates** the database if it doesn't exist (`initium seed --spec`)
 3. **Constructs** the DSN internally from structured `database.*` values — you never need to build a DSN string
@@ -263,6 +264,7 @@ The seeding mechanism depends on the database type:
   hook Job that connects to the database over the network.
 
 In both cases, the seed:
+
 1. Waits for the `accounts`, `users`, and `personal_access_tokens` tables
    to exist (created by the server via GORM AutoMigrate)
 2. Idempotently inserts a service user account and PAT
@@ -429,7 +431,7 @@ ADFS) can be tested manually:
 ### Global
 
 | Key                          | Type   | Default | Description                               |
-|------------------------------|--------|---------|-------------------------------------------|
+| ---------------------------- | ------ | ------- | ----------------------------------------- |
 | `nameOverride`               | string | `""`    | Override the chart name in resource names |
 | `fullnameOverride`           | string | `""`    | Fully override the resource name prefix   |
 | `imagePullSecrets`           | list   | `[]`    | Global image pull secrets for all pods    |
@@ -440,7 +442,7 @@ ADFS) can be tested manually:
 ### Database
 
 | Key                                  | Type   | Default      | Description                                                   |
-|--------------------------------------|--------|--------------|---------------------------------------------------------------|
+| ------------------------------------ | ------ | ------------ | ------------------------------------------------------------- |
 | `database.type`                      | string | `"sqlite"`   | Database engine (`sqlite`, `postgresql`, `mysql`)             |
 | `database.host`                      | string | `""`         | Database hostname (required for postgresql/mysql)             |
 | `database.port`                      | string | `""`         | Database port (defaults: 5432 for postgresql, 3306 for mysql) |
@@ -452,52 +454,52 @@ ADFS) can be tested manually:
 
 ### OIDC / SSO
 
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `oidc.enabled` | bool | `false` | Enable OIDC configuration |
-| `oidc.audience` | string | `""` | JWT audience claim (HttpServerConfig.AuthAudience) |
-| `oidc.userIdClaim` | string | `""` | JWT user ID claim (default: "sub") |
-| `oidc.configEndpoint` | string | `""` | OIDC discovery endpoint URL |
-| `oidc.authKeysLocation` | string | `""` | JWT keys location URL (JWKS) |
-| `oidc.deviceAuthFlow.enabled` | bool | `false` | Enable device authorization flow (CLI) |
-| `oidc.deviceAuthFlow.provider` | string | `"hosted"` | Device auth provider name |
-| `oidc.deviceAuthFlow.providerConfig.clientId` | string | `""` | Client ID for CLI app |
-| `oidc.deviceAuthFlow.providerConfig.clientSecret` | string | `""` | Client secret (usually empty for public) |
-| `oidc.deviceAuthFlow.providerConfig.domain` | string | `""` | Provider domain |
-| `oidc.deviceAuthFlow.providerConfig.audience` | string | `""` | Audience for token validation |
-| `oidc.deviceAuthFlow.providerConfig.tokenEndpoint` | string | `""` | Token endpoint override |
-| `oidc.deviceAuthFlow.providerConfig.deviceAuthEndpoint` | string | `""` | Device auth endpoint override |
-| `oidc.deviceAuthFlow.providerConfig.scope` | string | `"openid"` | OAuth2 scopes |
-| `oidc.deviceAuthFlow.providerConfig.useIdToken` | bool | `false` | Use ID token instead of access token |
-| `oidc.pkceAuthFlow.enabled` | bool | `false` | Enable PKCE authorization flow (dashboard) |
-| `oidc.pkceAuthFlow.providerConfig.clientId` | string | `""` | Client ID for dashboard app |
-| `oidc.pkceAuthFlow.providerConfig.clientSecret.value` | string | `""` | Plain-text client secret |
-| `oidc.pkceAuthFlow.providerConfig.clientSecret.secretName` | string | `""` | Secret name for client secret |
-| `oidc.pkceAuthFlow.providerConfig.clientSecret.secretKey` | string | `"clientSecret"` | Key in Secret |
-| `oidc.pkceAuthFlow.providerConfig.domain` | string | `""` | Provider domain |
-| `oidc.pkceAuthFlow.providerConfig.audience` | string | `""` | Audience |
-| `oidc.pkceAuthFlow.providerConfig.authorizationEndpoint` | string | `""` | Authorization endpoint override |
-| `oidc.pkceAuthFlow.providerConfig.tokenEndpoint` | string | `""` | Token endpoint override |
-| `oidc.pkceAuthFlow.providerConfig.scope` | string | `"openid profile email"` | OAuth2 scopes |
-| `oidc.pkceAuthFlow.providerConfig.redirectUrls` | list | `[]` | Allowed redirect URLs |
-| `oidc.pkceAuthFlow.providerConfig.useIdToken` | bool | `false` | Use ID token |
-| `oidc.pkceAuthFlow.providerConfig.disablePromptLogin` | bool | `false` | Disable login prompt |
-| `oidc.pkceAuthFlow.providerConfig.loginFlag` | int | `0` | Login flag value |
-| `oidc.idpManager.enabled` | bool | `false` | Enable IdP manager for user sync |
-| `oidc.idpManager.managerType` | string | `""` | Manager type (keycloak, auth0, azure, zitadel, okta, etc.) |
-| `oidc.idpManager.clientConfig.issuer` | string | `""` | OIDC issuer for management API |
-| `oidc.idpManager.clientConfig.tokenEndpoint` | string | `""` | Token endpoint |
-| `oidc.idpManager.clientConfig.clientId` | string | `""` | Client ID |
-| `oidc.idpManager.clientConfig.clientSecret.secretName` | string | `""` | Secret name for client secret |
-| `oidc.idpManager.clientConfig.clientSecret.secretKey` | string | `"clientSecret"` | Key in Secret |
-| `oidc.idpManager.clientConfig.grantType` | string | `"client_credentials"` | OAuth2 grant type |
-| `oidc.idpManager.extraConfig` | object | `{}` | Provider-specific extra config |
-| `oidc.idpManager.providerConfig` | object | `{}` | Provider-specific credentials |
+| Key                                                        | Type   | Default                  | Description                                                |
+| ---------------------------------------------------------- | ------ | ------------------------ | ---------------------------------------------------------- |
+| `oidc.enabled`                                             | bool   | `false`                  | Enable OIDC configuration                                  |
+| `oidc.audience`                                            | string | `""`                     | JWT audience claim (HttpServerConfig.AuthAudience)         |
+| `oidc.userIdClaim`                                         | string | `""`                     | JWT user ID claim (default: "sub")                         |
+| `oidc.configEndpoint`                                      | string | `""`                     | OIDC discovery endpoint URL                                |
+| `oidc.authKeysLocation`                                    | string | `""`                     | JWT keys location URL (JWKS)                               |
+| `oidc.deviceAuthFlow.enabled`                              | bool   | `false`                  | Enable device authorization flow (CLI)                     |
+| `oidc.deviceAuthFlow.provider`                             | string | `"hosted"`               | Device auth provider name                                  |
+| `oidc.deviceAuthFlow.providerConfig.clientId`              | string | `""`                     | Client ID for CLI app                                      |
+| `oidc.deviceAuthFlow.providerConfig.clientSecret`          | string | `""`                     | Client secret (usually empty for public)                   |
+| `oidc.deviceAuthFlow.providerConfig.domain`                | string | `""`                     | Provider domain                                            |
+| `oidc.deviceAuthFlow.providerConfig.audience`              | string | `""`                     | Audience for token validation                              |
+| `oidc.deviceAuthFlow.providerConfig.tokenEndpoint`         | string | `""`                     | Token endpoint override                                    |
+| `oidc.deviceAuthFlow.providerConfig.deviceAuthEndpoint`    | string | `""`                     | Device auth endpoint override                              |
+| `oidc.deviceAuthFlow.providerConfig.scope`                 | string | `"openid"`               | OAuth2 scopes                                              |
+| `oidc.deviceAuthFlow.providerConfig.useIdToken`            | bool   | `false`                  | Use ID token instead of access token                       |
+| `oidc.pkceAuthFlow.enabled`                                | bool   | `false`                  | Enable PKCE authorization flow (dashboard)                 |
+| `oidc.pkceAuthFlow.providerConfig.clientId`                | string | `""`                     | Client ID for dashboard app                                |
+| `oidc.pkceAuthFlow.providerConfig.clientSecret.value`      | string | `""`                     | Plain-text client secret                                   |
+| `oidc.pkceAuthFlow.providerConfig.clientSecret.secretName` | string | `""`                     | Secret name for client secret                              |
+| `oidc.pkceAuthFlow.providerConfig.clientSecret.secretKey`  | string | `"clientSecret"`         | Key in Secret                                              |
+| `oidc.pkceAuthFlow.providerConfig.domain`                  | string | `""`                     | Provider domain                                            |
+| `oidc.pkceAuthFlow.providerConfig.audience`                | string | `""`                     | Audience                                                   |
+| `oidc.pkceAuthFlow.providerConfig.authorizationEndpoint`   | string | `""`                     | Authorization endpoint override                            |
+| `oidc.pkceAuthFlow.providerConfig.tokenEndpoint`           | string | `""`                     | Token endpoint override                                    |
+| `oidc.pkceAuthFlow.providerConfig.scope`                   | string | `"openid profile email"` | OAuth2 scopes                                              |
+| `oidc.pkceAuthFlow.providerConfig.redirectUrls`            | list   | `[]`                     | Allowed redirect URLs                                      |
+| `oidc.pkceAuthFlow.providerConfig.useIdToken`              | bool   | `false`                  | Use ID token                                               |
+| `oidc.pkceAuthFlow.providerConfig.disablePromptLogin`      | bool   | `false`                  | Disable login prompt                                       |
+| `oidc.pkceAuthFlow.providerConfig.loginFlag`               | int    | `0`                      | Login flag value                                           |
+| `oidc.idpManager.enabled`                                  | bool   | `false`                  | Enable IdP manager for user sync                           |
+| `oidc.idpManager.managerType`                              | string | `""`                     | Manager type (keycloak, auth0, azure, zitadel, okta, etc.) |
+| `oidc.idpManager.clientConfig.issuer`                      | string | `""`                     | OIDC issuer for management API                             |
+| `oidc.idpManager.clientConfig.tokenEndpoint`               | string | `""`                     | Token endpoint                                             |
+| `oidc.idpManager.clientConfig.clientId`                    | string | `""`                     | Client ID                                                  |
+| `oidc.idpManager.clientConfig.clientSecret.secretName`     | string | `""`                     | Secret name for client secret                              |
+| `oidc.idpManager.clientConfig.clientSecret.secretKey`      | string | `"clientSecret"`         | Key in Secret                                              |
+| `oidc.idpManager.clientConfig.grantType`                   | string | `"client_credentials"`   | OAuth2 grant type                                          |
+| `oidc.idpManager.extraConfig`                              | object | `{}`                     | Provider-specific extra config                             |
+| `oidc.idpManager.providerConfig`                           | object | `{}`                     | Provider-specific credentials                              |
 
 ### PAT (Personal Access Token)
 
 | Key                     | Type   | Default               | Description                                    |
-|-------------------------|--------|-----------------------|------------------------------------------------|
+| ----------------------- | ------ | --------------------- | ---------------------------------------------- |
 | `pat.enabled`           | bool   | `false`               | Enable PAT seeding via post-install Job        |
 | `pat.secret.secretName` | string | `""`                  | Kubernetes Secret containing the plaintext PAT |
 | `pat.secret.tokenKey`   | string | `"token"`             | Key in Secret for the plaintext PAT            |
@@ -509,7 +511,7 @@ ADFS) can be tested manually:
 ### Server
 
 | Key                           | Type   | Default                       | Description                                                            |
-|-------------------------------|--------|-------------------------------|------------------------------------------------------------------------|
+| ----------------------------- | ------ | ----------------------------- | ---------------------------------------------------------------------- |
 | `server.replicaCount`         | int    | `1`                           | Number of server pod replicas                                          |
 | `server.image.repository`     | string | `"netbirdio/netbird-server"`  | Server image repository                                                |
 | `server.image.tag`            | string | `""` (appVersion)             | Server image tag                                                       |
@@ -521,7 +523,7 @@ ADFS) can be tested manually:
 #### Server Configuration
 
 | Key                                        | Type   | Default                       | Description                              |
-|--------------------------------------------|--------|-------------------------------|------------------------------------------|
+| ------------------------------------------ | ------ | ----------------------------- | ---------------------------------------- |
 | `server.config.listenAddress`              | string | `":80"`                       | Address and port the server listens on   |
 | `server.config.exposedAddress`             | string | `""`                          | Public URL for peer connections          |
 | `server.config.stunPorts`                  | list   | `[3478]`                      | UDP ports for the embedded STUN server   |
@@ -538,7 +540,7 @@ ADFS) can be tested manually:
 #### Server Secrets
 
 | Key                                              | Type   | Default           | Description                                  |
-|--------------------------------------------------|--------|-------------------|----------------------------------------------|
+| ------------------------------------------------ | ------ | ----------------- | -------------------------------------------- |
 | `server.secrets.authSecret.secretName`           | string | `""`              | Existing Secret name (empty = auto-generate) |
 | `server.secrets.authSecret.secretKey`            | string | `"authSecret"`    | Key in the Secret                            |
 | `server.secrets.authSecret.autoGenerate`         | bool   | `true`            | Auto-generate on first install               |
@@ -549,7 +551,7 @@ ADFS) can be tested manually:
 #### Server Storage
 
 | Key                                    | Type   | Default             | Description                             |
-|----------------------------------------|--------|---------------------|-----------------------------------------|
+| -------------------------------------- | ------ | ------------------- | --------------------------------------- |
 | `server.persistentVolume.enabled`      | bool   | `true`              | Create a PVC for server data            |
 | `server.persistentVolume.storageClass` | string | `""`                | Storage class (empty = cluster default) |
 | `server.persistentVolume.accessModes`  | list   | `["ReadWriteOnce"]` | PVC access modes                        |
@@ -559,7 +561,7 @@ ADFS) can be tested manually:
 #### Server Networking
 
 | Key                              | Type   | Default          | Description              |
-|----------------------------------|--------|------------------|--------------------------|
+| -------------------------------- | ------ | ---------------- | ------------------------ |
 | `server.stunPort`                | int    | `3478`           | STUN UDP container port  |
 | `server.service.type`            | string | `"ClusterIP"`    | Server service type      |
 | `server.service.port`            | int    | `80`             | Server service port      |
@@ -570,7 +572,7 @@ ADFS) can be tested manually:
 #### Server Ingress
 
 | Key                               | Type   | Default         | Description                               |
-|-----------------------------------|--------|-----------------|-------------------------------------------|
+| --------------------------------- | ------ | --------------- | ----------------------------------------- |
 | `server.ingress.enabled`          | bool   | `false`         | Create HTTP ingress (API + OAuth2)        |
 | `server.ingress.className`        | string | `"nginx"`       | Ingress class                             |
 | `server.ingress.annotations`      | object | `{}`            | Ingress annotations                       |
@@ -590,7 +592,7 @@ ADFS) can be tested manually:
 #### Server Pod
 
 | Key                         | Type   | Default                  | Description                    |
-|-----------------------------|--------|--------------------------|--------------------------------|
+| --------------------------- | ------ | ------------------------ | ------------------------------ |
 | `server.resources`          | object | `{}`                     | CPU/memory requests and limits |
 | `server.nodeSelector`       | object | `{}`                     | Node selector labels           |
 | `server.tolerations`        | list   | `[]`                     | Pod tolerations                |
@@ -605,7 +607,7 @@ ADFS) can be tested manually:
 ### Dashboard
 
 | Key                          | Type   | Default                 | Description                  |
-|------------------------------|--------|-------------------------|------------------------------|
+| ---------------------------- | ------ | ----------------------- | ---------------------------- |
 | `dashboard.replicaCount`     | int    | `1`                     | Number of dashboard replicas |
 | `dashboard.image.repository` | string | `"netbirdio/dashboard"` | Dashboard image              |
 | `dashboard.image.tag`        | string | `"v2.32.4"`             | Dashboard image tag          |
@@ -615,7 +617,7 @@ ADFS) can be tested manually:
 #### Dashboard Configuration
 
 | Key                                      | Type   | Default                         | Description                                  |
-|------------------------------------------|--------|---------------------------------|----------------------------------------------|
+| ---------------------------------------- | ------ | ------------------------------- | -------------------------------------------- |
 | `dashboard.config.mgmtApiEndpoint`       | string | `""`                            | Management API URL                           |
 | `dashboard.config.mgmtGrpcApiEndpoint`   | string | `""`                            | Management gRPC URL                          |
 | `dashboard.config.authAudience`          | string | `"netbird-dashboard"`           | OAuth2 audience                              |
@@ -631,7 +633,7 @@ ADFS) can be tested manually:
 #### Dashboard Secrets
 
 | Key                                             | Type   | Default          | Description                                   |
-|-------------------------------------------------|--------|------------------|-----------------------------------------------|
+| ----------------------------------------------- | ------ | ---------------- | --------------------------------------------- |
 | `dashboard.secrets.authClientSecret.value`      | string | `""`             | Plain-text client secret (when no Secret ref) |
 | `dashboard.secrets.authClientSecret.secretName` | string | `""`             | Existing Secret name                          |
 | `dashboard.secrets.authClientSecret.secretKey`  | string | `"clientSecret"` | Key in the Secret                             |
@@ -639,13 +641,13 @@ ADFS) can be tested manually:
 #### Dashboard Extra
 
 | Key                  | Type | Default | Description                      |
-|----------------------|------|---------|----------------------------------|
+| -------------------- | ---- | ------- | -------------------------------- |
 | `dashboard.extraEnv` | list | `[]`    | Additional environment variables |
 
 #### Dashboard Networking
 
 | Key                             | Type   | Default       | Description              |
-|---------------------------------|--------|---------------|--------------------------|
+| ------------------------------- | ------ | ------------- | ------------------------ |
 | `dashboard.service.type`        | string | `"ClusterIP"` | Dashboard service type   |
 | `dashboard.service.port`        | int    | `80`          | Dashboard service port   |
 | `dashboard.ingress.enabled`     | bool   | `false`       | Create dashboard ingress |
@@ -657,7 +659,7 @@ ADFS) can be tested manually:
 #### Dashboard Pod
 
 | Key                            | Type   | Default      | Description                    |
-|--------------------------------|--------|--------------|--------------------------------|
+| ------------------------------ | ------ | ------------ | ------------------------------ |
 | `dashboard.resources`          | object | `{}`         | CPU/memory requests and limits |
 | `dashboard.nodeSelector`       | object | `{}`         | Node selector labels           |
 | `dashboard.tolerations`        | list   | `[]`         | Pod tolerations                |
@@ -693,4 +695,3 @@ This chart is based on the [NetBird](https://github.com/netbirdio/netbird) proje
 ## License
 
 Apache License 2.0 — see [LICENSE](../../LICENSE).
-

@@ -11,6 +11,7 @@ You are preparing a Helm chart release. Follow these steps precisely.
 If the user provided an argument "$ARGUMENTS", use that as the chart name.
 
 Otherwise, detect which charts have unreleased changes:
+
 - For each directory under `charts/`, find the latest git tag matching `<chart-name>-*`
 - Run `git log <latest-tag>..origin/main -- charts/<chart-name>/` to see if there are commits since the last release
 - If there are commits, that chart needs a release
@@ -23,6 +24,7 @@ For each chart that needs releasing, analyze the commits since the last release 
 - `git log --oneline <latest-tag>..origin/main -- charts/<chart-name>/`
 
 Apply conventional commit rules to determine the bump:
+
 - **major**: any commit message contains `BREAKING CHANGE` or has a `!` after the type (e.g. `feat!:`, `fix!:`)
 - **minor**: any commit message starts with `feat:` or `feat(<scope>):`
 - **patch**: all other changes (`fix:`, `chore:`, `docs:`, `refactor:`, etc.)
@@ -58,6 +60,7 @@ Skip this step for patch-only bumps — the existing row already covers the curr
 ## 5. Run tests
 
 Run the full test suite for the chart:
+
 ```
 make test
 ```
