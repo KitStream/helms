@@ -111,7 +111,13 @@ tests:
           pattern: "driver: postgres"
       - matchRegex:
           path: data["pat-seed.yaml"]
-          pattern: "postgres://netbird.*pg\\.example\\.com:5432/netbird"
+          pattern: "host: pg\\.example\\.com"
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "user: netbird"
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "password:"
 
   - it: should use mysql database URL when database.type is mysql
     set:
@@ -128,7 +134,10 @@ tests:
           pattern: "driver: mysql"
       - matchRegex:
           path: data["pat-seed.yaml"]
-          pattern: "mysql://netbird.*mysql\\.example\\.com:3306/netbird"
+          pattern: "host: mysql\\.example\\.com"
+      - matchRegex:
+          path: data["pat-seed.yaml"]
+          pattern: "user: netbird"
 
   - it: should wait for required tables
     set:

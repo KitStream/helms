@@ -51,7 +51,13 @@ For reference, here is the seed spec the chart generates for PostgreSQL
 ```yaml
 database:
   driver: postgres
-  url: "postgres://netbird:{{ env.DB_PASSWORD }}@postgres.database.svc.cluster.local:5432/?sslmode=disable"
+  host: postgres.database.svc.cluster.local
+  port: 5432
+  user: netbird
+  password: "{{ env.DB_PASSWORD }}"
+  name: netbird
+  options:
+    sslmode: disable
 phases:
   - name: create-database
     database: netbird
@@ -60,5 +66,7 @@ phases:
 
 The `{{ env.DB_PASSWORD }}` is a MiniJinja template variable that Initium
 resolves at runtime from the `DB_PASSWORD` environment variable (injected via
-`secretKeyRef` from your password Secret).
+`secretKeyRef` from your password Secret). Initium v2's structured connection
+config builds the connection internally, so passwords with special characters
+work without any URL encoding.
 

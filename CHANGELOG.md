@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **netbird**: Fix seed spec connection strings failing when the database
+  password contains URL-special characters (`@`, `%`, `:`, etc.).
+  Seed specs now use Initium v2's structured connection config instead of
+  URL strings, so passwords with any characters work without encoding.
+  E2E tests now use a password containing `%40` to guard against
+  regressions. Fixes #32.
+
+### Changed
+
+- **netbird**: Bump Initium from 1.2.0 to 2.0.0. Uses structured
+  database connection config (no more URL-encoded passwords).
 - **Upstream version check**: Fix duplicate issue creation caused by GitHub's
   `--search` failing to match titles with special characters (e.g. `→`). The
   deduplication check now filters by the `autorelease` label instead.
