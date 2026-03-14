@@ -1,0 +1,51 @@
+# E2E test values — Embedded IdP (no external provider).
+#
+# Uses NetBird's built-in identity provider. No Keycloak, Auth0, or other
+# external IdP is deployed. Users are managed via the /setup endpoint.
+
+database:
+  type: sqlite
+
+server:
+  persistentVolume:
+    enabled: false
+
+  stunService:
+    type: ClusterIP
+
+  config:
+    exposedAddress: "https://netbird.localhost"
+    auth:
+      issuer: "https://netbird.localhost/oauth2"
+      dashboardRedirectURIs:
+        - "https://netbird.localhost/nb-auth"
+        - "https://netbird.localhost/nb-silent-auth"
+
+  livenessProbe:
+    failureThreshold: 20
+    initialDelaySeconds: 30
+    periodSeconds: 5
+    timeoutSeconds: 3
+    tcpSocket:
+      port: http
+  readinessProbe:
+    failureThreshold: 20
+    initialDelaySeconds: 30
+    periodSeconds: 5
+    timeoutSeconds: 3
+    tcpSocket:
+      port: http
+
+oidc:
+  enabled: true
+  idpManager:
+    enabled: true
+    managerType: "embedded"
+
+dashboard:
+  config:
+    mgmtApiEndpoint: "https://netbird.localhost"
+    mgmtGrpcApiEndpoint: "https://netbird.localhost"
+    authAuthority: "https://netbird.localhost/oauth2"
+    authClientId: "netbird-dashboard"
+    authAudience: "netbird-dashboard"

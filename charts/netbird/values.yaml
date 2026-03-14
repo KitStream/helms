@@ -179,6 +179,10 @@ oidc:
     enabled: false
     # -- Manager type: "keycloak", "auth0", "azure", "zitadel", "okta",
     #    "authentik", "google", "jumpcloud", "dex", "embedded".
+    #    Use "embedded" for NetBird's built-in IdP (no external provider
+    #    required). With embedded mode, users are managed through the
+    #    dashboard's /setup endpoint. Set server.config.auth.issuer to
+    #    "https://<your-domain>/oauth2".
     managerType: ""
     clientConfig:
       # -- OIDC issuer URL (often same as server.config.auth.issuer).
@@ -326,8 +330,12 @@ server:
 
     # -- Authentication / embedded IdP settings.
     auth:
-      # -- The OAuth2/OIDC issuer URL. Format: "https://your-domain/oauth2".
-      # Used to validate JWT tokens; must be accessible to clients.
+      # -- The OAuth2/OIDC issuer URL. Used to validate JWT tokens; must be
+      # accessible to clients. For an external provider, use the provider's
+      # issuer URL (e.g. "https://keycloak.example.com/realms/netbird").
+      # For NetBird's built-in (embedded) IdP, set to
+      # "https://<your-domain>/oauth2" and enable oidc.idpManager with
+      # managerType: "embedded".
       issuer: ""
 
       # -- Enable automatic refresh of IdP signing keys. Recommended: true.
