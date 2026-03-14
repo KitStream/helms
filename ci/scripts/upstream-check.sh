@@ -167,9 +167,8 @@ main() {
     issue_body+=$'\n'"### What needs to be done"$'\n\n'
     issue_body+="1. Update the version references listed above."$'\n'
     issue_body+="2. Update any hardcoded version strings in test assertions (\`charts/${chart_name}/tests/\`)."$'\n'
-    issue_body+="3. Bump the chart version in \`Chart.yaml\`."$'\n'
-    issue_body+="4. Review the upstream release notes for breaking changes."$'\n'
-    issue_body+="5. Run \`make test\` to verify lint and unit tests pass."$'\n'
+    issue_body+="3. Review the upstream release notes for breaking changes."$'\n'
+    issue_body+="4. Run \`make test\` to verify lint and unit tests pass."$'\n'
     issue_body+=$'\n'"---"$'\n'
     issue_body+="*This issue was created automatically by the upstream version checker.*"$'\n'
 
