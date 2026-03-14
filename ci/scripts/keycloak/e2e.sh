@@ -130,13 +130,13 @@ if ! helm install "$RELEASE" "$CHART" \
   "${EXTRA_SETS[@]}" \
   --timeout "$TIMEOUT"; then
   log "Helm install failed — dumping logs..."
-  kubectl -n "$NAMESPACE" logs deployment/"$RELEASE"-keycloak --all-containers --tail=100 2>/dev/null || true
+  kubectl -n "$NAMESPACE" logs deployment/"$RELEASE" --all-containers --tail=100 2>/dev/null || true
   fail "Helm install failed"
 fi
 
 # ── Verify rollout ───────────────────────────────────────────────────
 log "Verifying deployment..."
-kubectl -n "$NAMESPACE" rollout status deployment/"$RELEASE"-keycloak --timeout=600s
+kubectl -n "$NAMESPACE" rollout status deployment/"$RELEASE" --timeout=600s
 
 log "Pod status:"
 kubectl -n "$NAMESPACE" get pods -o wide
@@ -147,7 +147,7 @@ helm test "$RELEASE" -n "$NAMESPACE" --timeout 5m
 
 # ── Verify REST API access ───────────────────────────────────────────
 log "Verifying Keycloak REST API..."
-SVC_URL="http://$RELEASE-keycloak.$NAMESPACE.svc.cluster.local"
+SVC_URL="http://$RELEASE.$NAMESPACE.svc.cluster.local"
 MGMT_URL="$SVC_URL:9000"
 HTTP_URL="$SVC_URL:8080"
 
@@ -277,7 +277,7 @@ kubectl -n "$NAMESPACE" wait --for=jsonpath='{.status.phase}'=Succeeded pod/api-
   log "API test pod logs:"
   kubectl -n "$NAMESPACE" logs api-test || true
   log "Keycloak pod logs (last 50 lines):"
-  kubectl -n "$NAMESPACE" logs deployment/"$RELEASE"-keycloak --tail=50 || true
+  kubectl -n "$NAMESPACE" logs deployment/"$RELEASE" --tail=50 || true
   fail "API tests failed"
 }
 log "API test pod logs:"
@@ -286,9 +286,9 @@ kubectl -n "$NAMESPACE" logs api-test || true
 # ── Multi-replica verification ───────────────────────────────────────
 if [ "$SCENARIO" = "replicas" ]; then
   log "Verifying multi-replica deployment..."
-  READY_REPLICAS=$(kubectl -n "$NAMESPACE" get deployment "$RELEASE"-keycloak \
+  READY_REPLICAS=$(kubectl -n "$NAMESPACE" get deployment "$RELEASE" \
     -o jsonpath='{.status.readyReplicas}')
-  DESIRED_REPLICAS=$(kubectl -n "$NAMESPACE" get deployment "$RELEASE"-keycloak \
+  DESIRED_REPLICAS=$(kubectl -n "$NAMESPACE" get deployment "$RELEASE" \
     -o jsonpath='{.spec.replicas}')
   log "Replicas: $READY_REPLICAS/$DESIRED_REPLICAS ready"
   if [ "$READY_REPLICAS" != "$DESIRED_REPLICAS" ]; then

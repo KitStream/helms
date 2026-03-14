@@ -347,7 +347,7 @@ jobs:
           echo "=== Pod status ==="
           kubectl -n keycloak-e2e get pods -o wide || true
           echo "=== Keycloak logs ==="
-          kubectl -n keycloak-e2e logs deployment/keycloak-e2e-keycloak --tail=100 || true
+          kubectl -n keycloak-e2e logs deployment/keycloak-e2e --tail=100 || true
           echo "=== Events ==="
           kubectl -n keycloak-e2e get events --sort-by='.lastTimestamp' || true
 
@@ -379,7 +379,7 @@ jobs:
           echo "=== Pod status ==="
           kubectl -n keycloak-e2e get pods -o wide || true
           echo "=== Keycloak logs ==="
-          kubectl -n keycloak-e2e logs deployment/keycloak-e2e-keycloak --tail=100 || true
+          kubectl -n keycloak-e2e logs deployment/keycloak-e2e --tail=100 || true
           echo "=== PostgreSQL logs ==="
           kubectl -n keycloak-e2e logs deployment/postgres --tail=50 || true
           echo "=== Events ==="
@@ -413,7 +413,7 @@ jobs:
           echo "=== Pod status ==="
           kubectl -n keycloak-e2e get pods -o wide || true
           echo "=== Keycloak logs ==="
-          kubectl -n keycloak-e2e logs deployment/keycloak-e2e-keycloak --tail=100 || true
+          kubectl -n keycloak-e2e logs deployment/keycloak-e2e --tail=100 || true
           echo "=== PostgreSQL logs ==="
           kubectl -n keycloak-e2e logs deployment/postgres --tail=50 || true
           echo "=== Events ==="
