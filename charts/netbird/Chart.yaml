@@ -2,7 +2,7 @@ apiVersion: v2
 name: netbird
 description: A Helm chart for deploying NetBird VPN management, signal, dashboard, and relay services on Kubernetes
 type: application
-version: 0.2.1
+version: 0.3.0
 appVersion: "0.66.4"
 keywords:
   - netbird
@@ -32,3 +32,5 @@ annotations:
   artifacthub.io/changes: |
     - kind: changed
       description: Bump appVersion from 0.66.3 to 0.66.4
+    - kind: fixed
+      description: Use structured connection config for seed specs
