@@ -119,7 +119,7 @@ tests:
           value: wait-server
       - equal:
           path: spec.template.spec.initContainers[0].image
-          value: "ghcr.io/kitstream/initium:2.0.0"
+          value: "ghcr.io/kitstream/initium:2.1.0"
       - contains:
           path: spec.template.spec.initContainers[0].args
           content: "tcp://RELEASE-NAME-netbird-server:80"
@@ -158,7 +158,7 @@ tests:
           value: db-seed
       - equal:
           path: spec.template.spec.initContainers[1].image
-          value: "ghcr.io/kitstream/initium:2.0.0"
+          value: "ghcr.io/kitstream/initium:2.1.0"
 
   - it: should inject PAT_TOKEN into db-seed init container
     set:
