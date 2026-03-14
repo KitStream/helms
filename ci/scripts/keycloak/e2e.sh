@@ -23,8 +23,23 @@ ADMIN_PASSWORD="e2e-test-password-123"
 log()  { echo "==> $*"; }
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
-# ── Cleanup function ───────────────────────────────────────────────────
+# ── Debug & Cleanup functions ──────────────────────────────────────────
+dump_debug() {
+  echo "=== Pod status ==="
+  kubectl -n "$NAMESPACE" get pods -o wide 2>/dev/null || true
+  echo "=== Pod describe ==="
+  kubectl -n "$NAMESPACE" describe pods 2>/dev/null || true
+  echo "=== Keycloak logs ==="
+  kubectl -n "$NAMESPACE" logs deployment/"$RELEASE" --all-containers --tail=200 2>/dev/null || true
+  echo "=== Events ==="
+  kubectl -n "$NAMESPACE" get events --sort-by='.lastTimestamp' 2>/dev/null || true
+}
 cleanup() {
+  local exit_code=$?
+  if [ "$exit_code" -ne 0 ]; then
+    log "Test failed — dumping debug info..."
+    dump_debug
+  fi
   log "Cleaning up..."
   helm uninstall "$RELEASE" -n "$NAMESPACE" --ignore-not-found 2>/dev/null || true
   kubectl delete namespace "$NAMESPACE" --ignore-not-found 2>/dev/null || true
