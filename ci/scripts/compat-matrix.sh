@@ -230,12 +230,13 @@ if [ -f "$COMPAT_FILE" ]; then
           fi
         done < <(echo "$HEADER_LINE" | tr '|' '\n' | tail -n +3)
 
-        # Extract values from this row
+        # Extract values from this row (col 0 = empty before first |,
+        # col 1 = chart minor, col 2+ = data cells)
         col_idx=0
         while IFS= read -r val; do
           val=$(echo "$val" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-          if [ "$col_idx" -gt 0 ] && [ "$col_idx" -le "${#HEADER_COLS[@]}" ]; then
-            sv="${HEADER_COLS[$((col_idx-1))]}"
+          if [ "$col_idx" -gt 1 ] && [ "$col_idx" -le "$(( ${#HEADER_COLS[@]} + 1 ))" ]; then
+            sv="${HEADER_COLS[$((col_idx-2))]}"
             if [ -n "$val" ] && [ -n "$sv" ]; then
               EXISTING["${chart_m}|${sv}"]="$val"
             fi

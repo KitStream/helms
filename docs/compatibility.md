@@ -6,4 +6,5 @@
 
 | Chart ╲ Server | 0.66               | 0.65               | 0.64               | 0.63               | 0.62               |
 | -------------- | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ |
+| 0.3            | :white_check_mark: | :white_check_mark: | :heavy_minus_sign: | :heavy_minus_sign: | :heavy_minus_sign: |
 | 0.2            | :white_check_mark: | :white_check_mark: | :heavy_minus_sign: | :heavy_minus_sign: | :heavy_minus_sign: |
