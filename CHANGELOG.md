@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **netbird**: Bump appVersion from 0.66.3 to 0.66.4 (chart version 0.2.1).
+  Bug fixes and improvements; no breaking changes. See
+  [v0.66.4 release notes](https://github.com/netbirdio/netbird/releases/tag/v0.66.4).
 - **netbird**: Bump Initium from 1.2.0 to 2.0.0. Uses structured
   database connection config (no more URL-encoded passwords).
 - **Upstream version check**: Fix duplicate issue creation caused by GitHub's
