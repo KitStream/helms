@@ -31,6 +31,8 @@ Apply conventional commit rules to determine the bump:
 
 Use the highest applicable bump. Parse the current version from `charts/<chart-name>/Chart.yaml`.
 
+**Keycloak chart exception**: The keycloak chart version is synced with the upstream Keycloak appVersion (e.g. `26.5.0`). Do not bump the chart version independently — it always matches `appVersion`. When a new upstream Keycloak version is released, bump both `version` and `appVersion` together to the new upstream version.
+
 Present the proposed version bump to the user (current version -> new version) along with the commit list, and ask for confirmation before proceeding. The user may override the bump level.
 
 ## 3. Update Chart.yaml
