@@ -1,14 +1,18 @@
 # E2E test values — Embedded IdP (no external provider).
 #
 # Uses NetBird's built-in identity provider. No Keycloak, Auth0, or other
-# external IdP is deployed. Users are managed via the /setup endpoint.
+# external IdP is deployed. Users are managed via the management API.
+#
+# PAT seeding is enabled so the test can exercise the management API
+# (create users, groups, setup keys) — demonstrating how to automate
+# setup in embedded mode without an external IdP.
 
 database:
   type: sqlite
 
 server:
   persistentVolume:
-    enabled: false
+    enabled: true
 
   stunService:
     type: ClusterIP
