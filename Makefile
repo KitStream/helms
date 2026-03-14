@@ -1,4 +1,4 @@
-.PHONY: lint unittest e2e e2e-sqlite e2e-postgres e2e-mysql e2e-oidc-keycloak e2e-oidc-zitadel e2e-setup e2e-teardown test
+.PHONY: lint unittest e2e e2e-sqlite e2e-postgres e2e-mysql e2e-oidc-keycloak e2e-oidc-zitadel e2e-setup e2e-teardown test compat-matrix
 
 CHARTS := $(wildcard charts/*)
 
@@ -50,6 +50,10 @@ e2e: e2e-setup
 
 e2e-teardown:
 	kind delete cluster --name $(E2E_CLUSTER) 2>/dev/null || true
+
+# ── Compatibility Matrix ──────────────────────────────────────────────
+compat-matrix: e2e-setup
+	ci/scripts/compat-matrix.sh
 
 # ── Run all tests ──────────────────────────────────────────────────────
 test: lint unittest
