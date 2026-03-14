@@ -2,12 +2,15 @@
 #
 # The e2e script deploys mysql via a simple Deployment + Service
 # and creates the password secret before chart install.
+# The MySQL instance starts WITHOUT a "netbird" database so that
+# Initium's create_if_missing path is exercised.  We connect as
+# root since MYSQL_USER is not created without MYSQL_DATABASE.
 
 database:
   type: mysql
   host: "mysql.netbird-e2e.svc.cluster.local"
   port: 3306
-  user: netbird
+  user: root
   name: netbird
   passwordSecret:
     secretName: netbird-db-password

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **netbird**: Bump Initium from 2.0.0 to 2.1.0 to fix a regression in
+  database creation on blank PostgreSQL/MySQL instances.
+- **e2e**: PostgreSQL and MySQL e2e tests no longer pre-create the `netbird`
+  database, so Initium's `create_if_missing` path is properly exercised.
 - **netbird**: Fix seed spec connection strings failing when the database
   password contains URL-special characters (`@`, `%`, `:`, etc.).
   Seed specs now use Initium v2's structured connection config instead of

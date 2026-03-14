@@ -36,6 +36,9 @@ kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -
 # ── Deploy database (if needed) ───────────────────────────────────────
 deploy_postgres() {
   log "Deploying PostgreSQL..."
+  # NOTE: POSTGRES_DB is intentionally omitted so the "netbird" database does
+  # NOT exist on startup.  Initium's create_if_missing must create it — this
+  # is the production-like path we want to exercise in e2e tests.
   kubectl -n "$NAMESPACE" apply -f - <<'EOF'
 apiVersion: v1
 kind: Secret
@@ -43,7 +46,6 @@ metadata:
   name: postgres-credentials
 type: Opaque
 stringData:
-  POSTGRES_DB: netbird
   POSTGRES_USER: netbird
   POSTGRES_PASSWORD: "test%40pass"
 ---
@@ -97,6 +99,10 @@ EOF
 
 deploy_mysql() {
   log "Deploying MySQL..."
+  # NOTE: MYSQL_DATABASE is intentionally omitted so the "netbird" database
+  # does NOT exist on startup.  Initium's create_if_missing must create it.
+  # Without MYSQL_DATABASE the image won't create MYSQL_USER either, so the
+  # chart connects as root (see e2e-values-mysql.yaml).
   kubectl -n "$NAMESPACE" apply -f - <<'EOF'
 apiVersion: v1
 kind: Secret
@@ -104,9 +110,6 @@ metadata:
   name: mysql-credentials
 type: Opaque
 stringData:
-  MYSQL_DATABASE: netbird
-  MYSQL_USER: netbird
-  MYSQL_PASSWORD: "test%40pass"
   MYSQL_ROOT_PASSWORD: rootpassword
 ---
 apiVersion: v1
@@ -155,7 +158,7 @@ EOF
 
   # Create the password secret for netbird
   kubectl -n "$NAMESPACE" create secret generic netbird-db-password \
-    --from-literal=password='test%40pass'
+    --from-literal=password='rootpassword'
 }
 
 # ── Generate PAT for testing ───────────────────────────────────────────
