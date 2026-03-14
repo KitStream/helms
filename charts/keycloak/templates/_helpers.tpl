@@ -152,10 +152,14 @@ KC_DB_URL_PROPERTIES: {{ printf "?sslmode=%s" .Values.database.sslMode | quote }
     {{- end }}
   {{- end }}
 {{- end }}
+{{- if eq .Values.database.type "dev" }}
+KC_CACHE: "local"
+{{- else }}
 KC_CACHE: "ispn"
 KC_CACHE_STACK: {{ .Values.cache.stack | quote }}
 {{- if eq .Values.cache.stack "kubernetes" }}
 KC_CACHE_CONFIG_FILE: "cache-ispn.xml"
 JAVA_OPTS_APPEND: {{ printf "-Djgroups.dns.query=%s" (include "keycloak.headlessServiceFQDN" .) | quote }}
+{{- end }}
 {{- end }}
 {{- end }}

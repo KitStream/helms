@@ -201,7 +201,20 @@ tests:
 
   # ── Clustering ────────────────────────────────────────────────────────
 
-  - it: should set jdbc-ping cache stack by default
+  - it: should use local cache in dev mode
+    asserts:
+      - equal:
+          path: data.KC_CACHE
+          value: "local"
+      - notExists:
+          path: data.KC_CACHE_STACK
+
+  - it: should set jdbc-ping cache stack with external database
+    set:
+      database.type: postgresql
+      database.host: db.example.com
+      database.user: keycloak
+      database.password.secretName: db-secret
     asserts:
       - equal:
           path: data.KC_CACHE
@@ -212,6 +225,10 @@ tests:
 
   - it: should configure kubernetes cache stack with dns query
     set:
+      database.type: postgresql
+      database.host: db.example.com
+      database.user: keycloak
+      database.password.secretName: db-secret
       cache.stack: kubernetes
     asserts:
       - equal:
@@ -225,6 +242,11 @@ tests:
           value: "-Djgroups.dns.query=RELEASE-NAME-keycloak-headless.NAMESPACE.svc.cluster.local"
 
   - it: should not set dns query for jdbc-ping
+    set:
+      database.type: postgresql
+      database.host: db.example.com
+      database.user: keycloak
+      database.password.secretName: db-secret
     asserts:
       - notExists:
           path: data.JAVA_OPTS_APPEND
