@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "keycloak.fullname" . }}-headless
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "keycloak.allLabels" . | nindent 4 }}
+  {{- with .Values.headlessService.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: jgroups
+      port: {{ .Values.headlessService.jgroupsPort }}
+      targetPort: jgroups
+      protocol: TCP
+  selector:
+    {{- include "keycloak.selectorLabels" . | nindent 4 }}

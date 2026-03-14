@@ -1,0 +1,34 @@
+Keycloak has been deployed successfully!
+
+Components:
+  HTTP Service: {{ include "keycloak.fullname" . }}:{{ .Values.service.httpPort }}
+  Management Service: {{ include "keycloak.fullname" . }}:{{ .Values.service.managementPort }} (health + metrics)
+  Headless Service: {{ include "keycloak.fullname" . }}-headless:{{ .Values.headlessService.jgroupsPort }} (JGroups clustering)
+
+{{- if .Values.ingress.enabled }}
+
+  Ingress:
+  {{- range .Values.ingress.hosts }}
+    https://{{ .host }}{{ (index .paths 0).path }}
+  {{- end }}
+{{- end }}
+
+  Database: {{ .Values.database.type }}
+  Cache Stack: {{ .Values.cache.stack }}
+  Replicas: {{ .Values.replicaCount }}
+
+{{- if and .Values.admin.username .Values.admin.password.secretName }}
+
+  Admin Console:
+    Username: {{ .Values.admin.username }}
+    Password stored in Secret: {{ .Values.admin.password.secretName }} (key: {{ .Values.admin.password.secretKey }})
+    Retrieve with:
+      kubectl get secret {{ .Values.admin.password.secretName }} -n {{ .Release.Namespace }} -o jsonpath='{.data.{{ .Values.admin.password.secretKey }}}' | base64 -d
+{{- end }}
+
+{{- if eq .Values.database.type "dev" }}
+
+  NOTE: You are using the embedded H2 development database.
+  This is NOT suitable for production use. Configure an external
+  PostgreSQL, MySQL, or MSSQL database for production deployments.
+{{- end }}

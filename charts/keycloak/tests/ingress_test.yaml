@@ -1,0 +1,102 @@
+suite: ingress tests
+templates:
+  - templates/ingress.yaml
+tests:
+  - it: should not render when disabled
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render when enabled
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: keycloak.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Ingress
+
+  - it: should set ingress class name
+    set:
+      ingress.enabled: true
+      ingress.className: nginx
+      ingress.hosts:
+        - host: keycloak.example.com
+          paths:
+            - path: /
+    asserts:
+      - equal:
+          path: spec.ingressClassName
+          value: nginx
+
+  - it: should set annotations
+    set:
+      ingress.enabled: true
+      ingress.annotations:
+        cert-manager.io/cluster-issuer: letsencrypt
+      ingress.hosts:
+        - host: keycloak.example.com
+          paths:
+            - path: /
+    asserts:
+      - isSubset:
+          path: metadata.annotations
+          content:
+            cert-manager.io/cluster-issuer: letsencrypt
+
+  - it: should set host and paths
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: keycloak.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+            - path: /admin
+              pathType: Prefix
+    asserts:
+      - equal:
+          path: spec.rules[0].host
+          value: keycloak.example.com
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: /
+      - equal:
+          path: spec.rules[0].http.paths[1].path
+          value: /admin
+
+  - it: should default pathType to Prefix
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: keycloak.example.com
+          paths:
+            - path: /
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].pathType
+          value: Prefix
+
+  - it: should set TLS
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: keycloak.example.com
+          paths:
+            - path: /
+      ingress.tls:
+        - secretName: keycloak-tls
+          hosts:
+            - keycloak.example.com
+    asserts:
+      - equal:
+          path: spec.tls[0].secretName
+          value: keycloak-tls
+      - contains:
+          path: spec.tls[0].hosts
+          content: keycloak.example.com

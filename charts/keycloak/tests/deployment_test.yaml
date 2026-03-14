@@ -1,0 +1,476 @@
+suite: deployment tests
+templates:
+  - templates/deployment.yaml
+tests:
+  - it: should render a Deployment
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Deployment
+
+  - it: should use default image from appVersion
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "quay.io/keycloak/keycloak:26.5.0"
+
+  - it: should use custom image tag when set
+    set:
+      image.tag: "25.0.0"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "quay.io/keycloak/keycloak:25.0.0"
+
+  - it: should use custom image repository
+    set:
+      image.repository: my-registry/keycloak
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "my-registry/keycloak:26.5.0"
+
+  - it: should set replica count
+    set:
+      replicaCount: 3
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 3
+
+  - it: should include selector labels
+    asserts:
+      - isSubset:
+          path: spec.selector.matchLabels
+          content:
+            app.kubernetes.io/name: keycloak
+            app.kubernetes.io/instance: RELEASE-NAME
+
+  - it: should include pod labels
+    asserts:
+      - isSubset:
+          path: spec.template.metadata.labels
+          content:
+            app.kubernetes.io/name: keycloak
+            app.kubernetes.io/instance: RELEASE-NAME
+
+  - it: should add custom pod annotations
+    set:
+      podAnnotations:
+        prometheus.io/scrape: "true"
+    asserts:
+      - isSubset:
+          path: spec.template.metadata.annotations
+          content:
+            prometheus.io/scrape: "true"
+
+  - it: should add custom pod labels
+    set:
+      podLabels:
+        custom-label: custom-value
+    asserts:
+      - isSubset:
+          path: spec.template.metadata.labels
+          content:
+            custom-label: custom-value
+
+  - it: should include env checksum annotation
+    asserts:
+      - exists:
+          path: spec.template.metadata.annotations.checksum/env
+
+  # ── Ports ──────────────────────────────────────────────────────────────
+
+  - it: should expose http, management, and jgroups ports
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: http
+            containerPort: 8080
+            protocol: TCP
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: management
+            containerPort: 9000
+            protocol: TCP
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: jgroups
+            containerPort: 7800
+            protocol: TCP
+
+  - it: should expose https port when TLS is enabled
+    set:
+      tls.enabled: true
+      tls.secretName: kc-tls
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: https
+            containerPort: 8443
+            protocol: TCP
+
+  - it: should not expose https port when TLS is disabled
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: https
+          any: true
+
+  # ── Args ───────────────────────────────────────────────────────────────
+
+  - it: should use start-dev for dev database
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: start-dev
+
+  - it: should use start for external database
+    set:
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: keycloak
+      database.name: keycloak
+      database.password.secretName: pg-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: start
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: start-dev
+
+  - it: should add --optimized flag when build is enabled
+    set:
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: keycloak
+      database.name: keycloak
+      database.password.secretName: pg-secret
+      build.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --optimized
+
+  # ── Environment Variables ──────────────────────────────────────────────
+
+  - it: should mount env configmap via envFrom
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            configMapRef:
+              name: RELEASE-NAME-keycloak-env
+
+  - it: should inject admin credentials when configured
+    set:
+      admin.username: admin
+      admin.password.secretName: admin-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: KEYCLOAK_ADMIN
+            value: "admin"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: KEYCLOAK_ADMIN_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: admin-secret
+                key: password
+
+  - it: should not inject admin credentials when not configured
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].env
+
+  - it: should inject DB_PASSWORD for external database
+    set:
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: keycloak
+      database.name: keycloak
+      database.password.secretName: pg-secret
+      database.password.secretKey: dbpass
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: KC_DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: pg-secret
+                key: dbpass
+
+  - it: should not inject DB_PASSWORD for dev database
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].env
+
+  - it: should mount extraEnvVarsSecret when set
+    set:
+      extraEnvVarsSecret: my-extra-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: my-extra-secret
+
+  - it: should include extra env vars
+    set:
+      extraEnvVars:
+        - name: MY_VAR
+          value: my-value
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: MY_VAR
+            value: my-value
+
+  # ── Build Init Container ──────────────────────────────────────────────
+
+  - it: should not have init containers by default
+    asserts:
+      - notExists:
+          path: spec.template.spec.initContainers
+
+  - it: should add build init container when enabled
+    set:
+      build.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: build
+      - equal:
+          path: spec.template.spec.initContainers[0].args[0]
+          value: build
+
+  - it: should use same image for build init container
+    set:
+      build.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].image
+          value: "quay.io/keycloak/keycloak:26.5.0"
+
+  - it: should set hardened securityContext on build init container
+    set:
+      build.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.allowPrivilegeEscalation
+          value: false
+
+  - it: should inject DB_PASSWORD into build init container for external database
+    set:
+      build.enabled: true
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: keycloak
+      database.name: keycloak
+      database.password.secretName: pg-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[0].env
+          content:
+            name: KC_DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: pg-secret
+                key: password
+
+  # ── Volumes ────────────────────────────────────────────────────────────
+
+  - it: should mount TLS certs when enabled
+    set:
+      tls.enabled: true
+      tls.secretName: kc-tls
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: tls-certs
+            mountPath: /opt/keycloak/conf/tls
+            readOnly: true
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: tls-certs
+            secret:
+              secretName: kc-tls
+
+  - it: should mount PVC when persistence is enabled
+    set:
+      persistence.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: providers
+            mountPath: /opt/keycloak/providers
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: providers
+            persistentVolumeClaim:
+              claimName: RELEASE-NAME-keycloak
+
+  - it: should mount extra volumes
+    set:
+      extraVolumes:
+        - name: my-theme
+          configMap:
+            name: my-theme-cm
+      extraVolumeMounts:
+        - name: my-theme
+          mountPath: /opt/keycloak/themes/my-theme
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: my-theme
+            configMap:
+              name: my-theme-cm
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: my-theme
+            mountPath: /opt/keycloak/themes/my-theme
+
+  # ── Probes ─────────────────────────────────────────────────────────────
+
+  - it: should configure startup probe on management port
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.httpGet.path
+          value: /health/started
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.httpGet.port
+          value: management
+
+  - it: should configure liveness probe on management port
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /health/live
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.port
+          value: management
+
+  - it: should configure readiness probe on management port
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /health/ready
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.port
+          value: management
+
+  # ── Scheduling ─────────────────────────────────────────────────────────
+
+  - it: should set resource limits when specified
+    set:
+      resources:
+        limits:
+          cpu: 500m
+          memory: 512Mi
+        requests:
+          cpu: 100m
+          memory: 128Mi
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+
+  - it: should set node selector
+    set:
+      nodeSelector:
+        disktype: ssd
+    asserts:
+      - equal:
+          path: spec.template.spec.nodeSelector
+          value:
+            disktype: ssd
+
+  - it: should set tolerations
+    set:
+      tolerations:
+        - key: "dedicated"
+          operator: "Equal"
+          value: "keycloak"
+          effect: "NoSchedule"
+    asserts:
+      - contains:
+          path: spec.template.spec.tolerations
+          content:
+            key: "dedicated"
+            operator: "Equal"
+            value: "keycloak"
+            effect: "NoSchedule"
+
+  - it: should set affinity
+    set:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: keycloak
+                topologyKey: kubernetes.io/hostname
+    asserts:
+      - exists:
+          path: spec.template.spec.affinity.podAntiAffinity
+
+  - it: should set pod security context
+    set:
+      podSecurityContext:
+        runAsUser: 1000
+        fsGroup: 2000
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            runAsUser: 1000
+            fsGroup: 2000
+
+  - it: should set container security context
+    set:
+      securityContext:
+        readOnlyRootFilesystem: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            readOnlyRootFilesystem: true
+
+  - it: should set imagePullSecrets
+    set:
+      imagePullSecrets:
+        - name: my-registry
+    asserts:
+      - contains:
+          path: spec.template.spec.imagePullSecrets
+          content:
+            name: my-registry

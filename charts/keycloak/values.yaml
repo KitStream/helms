@@ -1,0 +1,235 @@
+# -- Override the chart name
+nameOverride: ""
+# -- Override the full resource name
+fullnameOverride: ""
+
+# -- Global image pull secrets applied to all pods
+imagePullSecrets: []
+
+# ── Service Account ──────────────────────────────────────────────────────
+serviceAccount:
+  # -- Create a dedicated ServiceAccount
+  create: true
+  # -- Annotations for the ServiceAccount (e.g. IAM role bindings)
+  annotations: {}
+  # -- Override the ServiceAccount name (defaults to fullname)
+  name: ""
+
+# ── Image ────────────────────────────────────────────────────────────────
+image:
+  # -- Keycloak container image repository
+  repository: quay.io/keycloak/keycloak
+  # -- Image tag (defaults to Chart appVersion)
+  tag: ""
+  # -- Image pull policy
+  pullPolicy: IfNotPresent
+
+# ── Replica Count ────────────────────────────────────────────────────────
+# -- Number of Keycloak replicas
+replicaCount: 1
+
+# ── Database ─────────────────────────────────────────────────────────────
+database:
+  # -- Database type: "postgresql", "mysql", "mssql", or "dev" (embedded H2)
+  type: "dev"
+  # -- Database hostname (required for postgresql/mysql/mssql)
+  host: ""
+  # -- Database port (auto-defaults: 5432 for postgresql, 3306 for mysql, 1433 for mssql)
+  port: ""
+  # -- Database name
+  name: "keycloak"
+  # -- Database username
+  user: ""
+  # -- Database password via Kubernetes Secret reference
+  password:
+    # -- Name of the Secret containing the database password
+    secretName: ""
+    # -- Key within the Secret
+    secretKey: "password"
+  # -- Connection pool minimum size
+  poolMinSize: ""
+  # -- Connection pool initial size
+  poolInitialSize: ""
+  # -- Connection pool maximum size
+  poolMaxSize: ""
+  # -- SSL/TLS mode for database connection (e.g. "verify-full", "require", "disable")
+  sslMode: ""
+
+# ── Hostname ─────────────────────────────────────────────────────────────
+# -- Public hostname for Keycloak (maps to KC_HOSTNAME)
+hostname: ""
+# -- Separate admin console hostname (maps to KC_HOSTNAME_ADMIN)
+hostnameAdmin: ""
+# -- Enforce strict hostname checking (maps to KC_HOSTNAME_STRICT)
+hostnameStrict: true
+
+# ── Proxy / TLS ──────────────────────────────────────────────────────────
+# -- Proxy header mode: "xforwarded" or "forwarded" (maps to KC_PROXY_HEADERS)
+proxyHeaders: ""
+# -- Enable HTTP listener (maps to KC_HTTP_ENABLED); required for edge-terminated TLS
+httpEnabled: true
+# -- TLS passthrough configuration
+tls:
+  # -- Enable TLS passthrough (mounts certificate and key)
+  enabled: false
+  # -- Name of the Secret containing tls.crt and tls.key
+  secretName: ""
+
+# ── Clustering ───────────────────────────────────────────────────────────
+cache:
+  # -- Cache stack: "jdbc-ping" (default, uses the database) or "kubernetes" (dns-ping via headless service)
+  stack: "jdbc-ping"
+
+# ── Health ───────────────────────────────────────────────────────────────
+# -- Enable Keycloak health endpoints (KC_HEALTH_ENABLED)
+healthEnabled: true
+
+# ── Observability ────────────────────────────────────────────────────────
+metrics:
+  # -- Enable Prometheus metrics endpoint on /metrics (KC_METRICS_ENABLED)
+  enabled: true
+  # -- Deploy a ServiceMonitor for Prometheus Operator
+  serviceMonitor:
+    # -- Create the ServiceMonitor resource
+    enabled: false
+    # -- Additional labels for the ServiceMonitor
+    labels: {}
+    # -- Scrape interval
+    interval: ""
+    # -- Scrape timeout
+    scrapeTimeout: ""
+
+# ── Logging ──────────────────────────────────────────────────────────────
+# -- Keycloak log level (maps to KC_LOG_LEVEL)
+logLevel: "info"
+
+# ── Features ─────────────────────────────────────────────────────────────
+# -- Comma-separated list of Keycloak features to enable (maps to KC_FEATURES)
+features: ""
+
+# ── Admin Credentials ────────────────────────────────────────────────────
+admin:
+  # -- Admin username (maps to KEYCLOAK_ADMIN). Leave empty to skip initial admin creation
+  username: ""
+  # -- Admin password via Kubernetes Secret reference
+  password:
+    # -- Name of the Secret containing the admin password
+    secretName: ""
+    # -- Key within the Secret
+    secretKey: "password"
+
+# ── Build Optimization ──────────────────────────────────────────────────
+build:
+  # -- Run `kc.sh build` in an init container for faster startup
+  enabled: false
+
+# ── Extra Configuration ─────────────────────────────────────────────────
+# -- Additional environment variables as a list of {name, value} or {name, valueFrom} objects
+extraEnvVars: []
+
+# -- Name of an existing Secret to mount as additional environment variables
+extraEnvVarsSecret: ""
+
+# -- Additional volumes to add to the pod
+extraVolumes: []
+
+# -- Additional volume mounts to add to the Keycloak container
+extraVolumeMounts: []
+
+# ── Persistent Storage ──────────────────────────────────────────────────
+persistence:
+  # -- Enable persistent volume for custom themes/providers
+  enabled: false
+  # -- Storage class name
+  storageClass: ""
+  # -- Access modes
+  accessModes:
+    - ReadWriteOnce
+  # -- Volume size
+  size: 1Gi
+  # -- Annotations for the PVC
+  annotations: {}
+
+# ── Service ──────────────────────────────────────────────────────────────
+service:
+  # -- Service type
+  type: ClusterIP
+  # -- HTTP port
+  httpPort: 8080
+  # -- Management port (health + metrics)
+  managementPort: 9000
+  # -- Service annotations
+  annotations: {}
+
+# ── Headless Service (clustering) ────────────────────────────────────────
+headlessService:
+  # -- JGroups port for cluster communication
+  jgroupsPort: 7800
+  # -- Annotations for the headless service
+  annotations: {}
+
+# ── Ingress ──────────────────────────────────────────────────────────────
+ingress:
+  # -- Enable Ingress resource
+  enabled: false
+  # -- Ingress class name
+  className: ""
+  # -- Ingress annotations
+  annotations: {}
+  # -- Ingress hosts
+  hosts: []
+  #   - host: keycloak.example.com
+  #     paths:
+  #       - path: /
+  #         pathType: Prefix
+  # -- TLS configuration
+  tls: []
+  #   - secretName: keycloak-tls
+  #     hosts:
+  #       - keycloak.example.com
+
+# ── Probes ───────────────────────────────────────────────────────────────
+startupProbe:
+  httpGet:
+    path: /health/started
+    port: management
+  initialDelaySeconds: 30
+  periodSeconds: 5
+  failureThreshold: 60
+  timeoutSeconds: 3
+
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: management
+  initialDelaySeconds: 0
+  periodSeconds: 15
+  failureThreshold: 3
+  timeoutSeconds: 3
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: management
+  initialDelaySeconds: 0
+  periodSeconds: 10
+  failureThreshold: 3
+  timeoutSeconds: 3
+
+# ── Pod Scheduling & Metadata ────────────────────────────────────────────
+# -- Resource requests and limits
+resources: {}
+# -- Node selector
+nodeSelector: {}
+# -- Tolerations
+tolerations: []
+# -- Affinity rules
+affinity: {}
+# -- Pod annotations
+podAnnotations: {}
+# -- Pod labels
+podLabels: {}
+# -- Pod-level security context
+podSecurityContext: {}
+# -- Container-level security context
+securityContext: {}

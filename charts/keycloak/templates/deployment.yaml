@@ -1,0 +1,189 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "keycloak.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "keycloak.allLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "keycloak.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/env: {{ include "keycloak.envConfigData" . | sha256sum }}
+{{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+{{- end }}
+      labels:
+        {{- include "keycloak.selectorLabels" . | nindent 8 }}
+{{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+{{- end }}
+    spec:
+      serviceAccountName: {{ include "keycloak.serviceAccountName" . }}
+{{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+{{- end }}
+{{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+{{- end }}
+{{- if .Values.build.enabled }}
+      initContainers:
+        - name: build
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/opt/keycloak/bin/kc.sh"]
+          args: ["build"]
+          envFrom:
+            - configMapRef:
+                name: {{ include "keycloak.fullname" . }}-env
+          env:
+{{- if eq (include "keycloak.database.isExternal" .) "true" }}
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.password.secretName }}
+                  key: {{ .Values.database.password.secretKey }}
+{{- end }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: build-cache
+              mountPath: /opt/keycloak/lib/quarkus
+{{- end }}
+      containers:
+        - name: keycloak
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+{{- if eq .Values.database.type "dev" }}
+            - start-dev
+{{- else }}
+            - start
+  {{- if .Values.build.enabled }}
+            - --optimized
+  {{- end }}
+{{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "keycloak.fullname" . }}-env
+{{- if .Values.extraEnvVarsSecret }}
+            - secretRef:
+                name: {{ .Values.extraEnvVarsSecret }}
+{{- end }}
+{{- $hasAdmin := and .Values.admin.username .Values.admin.password.secretName }}
+{{- $hasExternalDB := eq (include "keycloak.database.isExternal" .) "true" }}
+{{- if or $hasAdmin $hasExternalDB .Values.extraEnvVars }}
+          env:
+  {{- if $hasAdmin }}
+            - name: KEYCLOAK_ADMIN
+              value: {{ .Values.admin.username | quote }}
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.admin.password.secretName }}
+                  key: {{ .Values.admin.password.secretKey }}
+  {{- end }}
+  {{- if $hasExternalDB }}
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.password.secretName }}
+                  key: {{ .Values.database.password.secretKey }}
+  {{- end }}
+  {{- with .Values.extraEnvVars }}
+            {{- toYaml . | nindent 12 }}
+  {{- end }}
+{{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: management
+              containerPort: 9000
+              protocol: TCP
+            - name: jgroups
+              containerPort: 7800
+              protocol: TCP
+{{- if .Values.tls.enabled }}
+            - name: https
+              containerPort: 8443
+              protocol: TCP
+{{- end }}
+          volumeMounts:
+{{- if .Values.build.enabled }}
+            - name: build-cache
+              mountPath: /opt/keycloak/lib/quarkus
+              readOnly: true
+{{- end }}
+{{- if .Values.tls.enabled }}
+            - name: tls-certs
+              mountPath: /opt/keycloak/conf/tls
+              readOnly: true
+{{- end }}
+{{- if .Values.persistence.enabled }}
+            - name: providers
+              mountPath: /opt/keycloak/providers
+{{- end }}
+{{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+{{- end }}
+{{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+{{- end }}
+{{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+{{- end }}
+{{- with .Values.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+{{- end }}
+{{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+{{- end }}
+{{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+{{- end }}
+      volumes:
+{{- if .Values.build.enabled }}
+        - name: build-cache
+          emptyDir: {}
+{{- end }}
+{{- if .Values.tls.enabled }}
+        - name: tls-certs
+          secret:
+            secretName: {{ .Values.tls.secretName }}
+{{- end }}
+{{- if .Values.persistence.enabled }}
+        - name: providers
+          persistentVolumeClaim:
+            claimName: {{ include "keycloak.fullname" . }}
+{{- end }}
+{{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+{{- end }}
+{{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+{{- end }}
+{{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+{{- end }}
+{{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+{{- end }}
