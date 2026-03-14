@@ -32,5 +32,3 @@ annotations:
   artifacthub.io/changes: |
     - kind: fixed
       description: Bump initium from 2.0.0 to 2.1.0
-    - kind: changed
-      description: Exercise Initium database creation on blank instances in e2e tests
