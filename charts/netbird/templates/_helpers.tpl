@@ -331,37 +331,26 @@ netbird.database.seedSpec — renders the Initium seed spec YAML for
 creating the target database if it doesn't exist.
 Only rendered for non-sqlite database types.
 
-The spec is a MiniJinja template — {{ env.DB_PASSWORD }} is resolved
-by Initium at runtime from the DB_PASSWORD environment variable.
+Uses Initium v2's structured connection config so that passwords
+with special characters work without any URL encoding.
+{{ env.DB_PASSWORD }} is resolved by Initium at runtime.
 */}}
 {{- define "netbird.database.seedSpec" -}}
 database:
   driver: {{ include "netbird.database.engine" . }}
+  host: {{ .Values.database.host }}
+  port: {{ include "netbird.database.port" . }}
+  user: {{ .Values.database.user }}
+  password: "{{ "{{ env.DB_PASSWORD }}" }}"
+  name: {{ .Values.database.name }}
 {{- if eq .Values.database.type "postgresql" }}
-  url: "postgres://{{ .Values.database.user }}:{{ "{{ env.DB_PASSWORD }}" }}@{{ .Values.database.host }}:{{ include "netbird.database.port" . }}/?sslmode={{ .Values.database.sslMode }}"
-{{- else if eq .Values.database.type "mysql" }}
-  url: "mysql://{{ .Values.database.user }}:{{ "{{ env.DB_PASSWORD }}" }}@{{ .Values.database.host }}:{{ include "netbird.database.port" . }}/{{ .Values.database.name }}"
+  options:
+    sslmode: {{ .Values.database.sslMode }}
 {{- end }}
 phases:
   - name: create-database
     database: {{ .Values.database.name }}
     create_if_missing: true
-{{- end }}
-{{/*
-netbird.database.patDatabaseUrl — constructs the database URL for PAT seeding.
-This URL connects to the target database (not the system database).
-For sqlite, it points to the database file.
-The spec is a MiniJinja template — {{ env.DB_PASSWORD }} is resolved
-by Initium at runtime from the DB_PASSWORD environment variable.
-*/}}
-{{- define "netbird.database.patDatabaseUrl" -}}
-{{- if eq .Values.database.type "sqlite" -}}
-/var/lib/netbird/store.db
-{{- else if eq .Values.database.type "postgresql" -}}
-postgres://{{ .Values.database.user }}:{{ "{{ env.DB_PASSWORD }}" }}@{{ .Values.database.host }}:{{ include "netbird.database.port" . }}/{{ .Values.database.name }}?sslmode={{ .Values.database.sslMode }}
-{{- else if eq .Values.database.type "mysql" -}}
-mysql://{{ .Values.database.user }}:{{ "{{ env.DB_PASSWORD }}" }}@{{ .Values.database.host }}:{{ include "netbird.database.port" . }}/{{ .Values.database.name }}
-{{- end -}}
 {{- end }}
 {{/*
 netbird.pat.seedSpec — renders the Initium seed spec YAML for
@@ -370,8 +359,8 @@ The seed waits for the personal_access_tokens table (created by NetBird
 on startup via GORM AutoMigrate), then idempotently inserts the
 account, user, PAT, "All" group, default policy, and default policy
 rule records.
-Seed sets use mode: reconcile (Initium v1.2.0+) so that value
-changes in the Helm chart are reflected in the database on upgrade.
+Seed sets use mode: reconcile so that value changes in the Helm chart
+are reflected in the database on upgrade.
 MiniJinja placeholders:
   {{ env.PAT_TOKEN | sha256("bytes") | base64_encode }} — computes the
   base64-encoded SHA256 hash from the plaintext PAT at seed time.
@@ -379,7 +368,19 @@ MiniJinja placeholders:
 {{- define "netbird.pat.seedSpec" -}}
 database:
   driver: {{ include "netbird.database.engine" . }}
-  url: "{{ include "netbird.database.patDatabaseUrl" . }}"
+{{- if eq .Values.database.type "sqlite" }}
+  url: "/var/lib/netbird/store.db"
+{{- else }}
+  host: {{ .Values.database.host }}
+  port: {{ include "netbird.database.port" . }}
+  user: {{ .Values.database.user }}
+  password: "{{ "{{ env.DB_PASSWORD }}" }}"
+  name: {{ .Values.database.name }}
+{{- if eq .Values.database.type "postgresql" }}
+  options:
+    sslmode: {{ .Values.database.sslMode }}
+{{- end }}
+{{- end }}
 phases:
   - name: seed-pat
     order: 1

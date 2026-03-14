@@ -45,7 +45,7 @@ type: Opaque
 stringData:
   POSTGRES_DB: netbird
   POSTGRES_USER: netbird
-  POSTGRES_PASSWORD: testpassword
+  POSTGRES_PASSWORD: "test%40pass"
 ---
 apiVersion: v1
 kind: Service
@@ -92,7 +92,7 @@ EOF
 
   # Create the password secret for netbird
   kubectl -n "$NAMESPACE" create secret generic netbird-db-password \
-    --from-literal=password="testpassword"
+    --from-literal=password='test%40pass'
 }
 
 deploy_mysql() {
@@ -106,7 +106,7 @@ type: Opaque
 stringData:
   MYSQL_DATABASE: netbird
   MYSQL_USER: netbird
-  MYSQL_PASSWORD: testpassword
+  MYSQL_PASSWORD: "test%40pass"
   MYSQL_ROOT_PASSWORD: rootpassword
 ---
 apiVersion: v1
@@ -155,7 +155,7 @@ EOF
 
   # Create the password secret for netbird
   kubectl -n "$NAMESPACE" create secret generic netbird-db-password \
-    --from-literal=password="testpassword"
+    --from-literal=password='test%40pass'
 }
 
 # ── Generate PAT for testing ───────────────────────────────────────────
