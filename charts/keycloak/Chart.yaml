@@ -2,7 +2,7 @@ apiVersion: v2
 name: keycloak
 description: A Helm chart for deploying Keycloak IAM using the upstream quay.io/keycloak/keycloak image on Kubernetes
 type: application
-version: 26.5.0
+version: 26.5.0+patch1
 appVersion: "26.5.0"
 keywords:
   - keycloak
@@ -30,5 +30,5 @@ annotations:
     - name: Source
       url: https://github.com/KitStream/helms
   artifacthub.io/changes: |
-    - kind: added
-      description: Initial Keycloak chart with upstream image support
+    - kind: changed
+      description: Internal patch release
