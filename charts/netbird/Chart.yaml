@@ -30,7 +30,5 @@ annotations:
     - name: Initium
       url: https://github.com/KitStream/initium
   artifacthub.io/changes: |
-    - kind: changed
-      description: Bump appVersion from 0.66.3 to 0.66.4
     - kind: fixed
-      description: Use structured connection config for seed specs
+      description: Bump initium from 2.0.0 to 2.1.0 to fix regression

@@ -280,7 +280,7 @@ server:
     # -- Init container image repository.
     repository: ghcr.io/kitstream/initium
     # -- Init container image tag.
-    tag: "2.0.0"
+    tag: "2.1.0"
 
   # -- Component-level image pull secrets.
   imagePullSecrets: []

@@ -144,7 +144,7 @@ tests:
           value: config-init
       - equal:
           path: spec.template.spec.initContainers[0].image
-          value: "ghcr.io/kitstream/initium:2.0.0"
+          value: "ghcr.io/kitstream/initium:2.1.0"
 
   - it: should have only config-init for sqlite without pat
     asserts:
@@ -386,7 +386,7 @@ tests:
     asserts:
       - equal:
           path: spec.template.spec.initContainers[1].image
-          value: "ghcr.io/kitstream/initium:2.0.0"
+          value: "ghcr.io/kitstream/initium:2.1.0"
 
   - it: should run seed command with --sidecar flag in pat-seed sidecar
     set:
