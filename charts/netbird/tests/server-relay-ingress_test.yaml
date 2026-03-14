@@ -31,7 +31,7 @@ tests:
     asserts:
       - matchRegex:
           path: metadata.name
-          pattern: '-relay$'
+          pattern: "-relay$"
 
   - it: should set host and paths
     set:
@@ -69,4 +69,3 @@ tests:
       - equal:
           path: spec.tls[0].secretName
           value: netbird-tls
-

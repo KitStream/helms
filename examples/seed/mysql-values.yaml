@@ -61,4 +61,3 @@ dashboard:
     authAuthority: "https://auth.example.com"
     authClientId: "netbird-dashboard"
     authAudience: "netbird-dashboard"
-

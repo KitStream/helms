@@ -36,4 +36,3 @@ annotations:
       description: Use busybox wget in provision script, add E2E wait for provisioning
     - kind: fixed
       description: Create group and policy via API instead of direct DB seed
-

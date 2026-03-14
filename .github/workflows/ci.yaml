@@ -17,13 +17,13 @@ jobs:
       - name: Install dprint
         run: curl -fsSL https://dprint.dev/install.sh | sh && echo "$HOME/.dprint/bin" >> "$GITHUB_PATH"
 
-      - name: Check markdown formatting
+      - name: Check markdown and YAML formatting
         run: dprint check
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: 'stable'
+          go-version: "stable"
           cache: false
 
       - name: Install helmfmt

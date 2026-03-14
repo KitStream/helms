@@ -333,4 +333,3 @@ tests:
       - matchRegex:
           path: data["config.yaml.tpl"]
           pattern: 'authAudience: "my\$\{DOLLAR\}api"'
-
