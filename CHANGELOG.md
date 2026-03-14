@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Fixed
+
+- **Upstream version check**: Fix duplicate issue creation caused by GitHub's
+  `--search` failing to match titles with special characters (e.g. `→`). The
+  deduplication check now filters by the `autorelease` label instead.
+
 ## [0.1.2] — 2026-03-10
 
 ### Changed
