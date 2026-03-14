@@ -17,18 +17,111 @@ Components:
   Cache Stack: {{ .Values.cache.stack }}
   Replicas: {{ .Values.replicaCount }}
 
+─────────────────────────────────────────────────────────────────────────
+Admin Credentials:
 {{- if and .Values.admin.username .Values.admin.password.secretName }}
 
-  Admin Console:
-    Username: {{ .Values.admin.username }}
-    Password stored in Secret: {{ .Values.admin.password.secretName }} (key: {{ .Values.admin.password.secretKey }})
-    Retrieve with:
-      kubectl get secret {{ .Values.admin.password.secretName }} -n {{ .Release.Namespace }} -o jsonpath='{.data.{{ .Values.admin.password.secretKey }}}' | base64 -d
+  The initial admin user is created automatically on first startup.
+
+  Username: {{ .Values.admin.username }}
+  Password: stored in Kubernetes Secret "{{ .Values.admin.password.secretName }}" (key: {{ .Values.admin.password.secretKey }})
+
+  To retrieve the admin password:
+
+    kubectl get secret {{ .Values.admin.password.secretName }} -n {{ .Release.Namespace }} \
+      -o jsonpath='{.data.{{ .Values.admin.password.secretKey }}}' | base64 -d
+
+  To set up admin credentials, create a Secret before installing the chart:
+
+    kubectl create secret generic keycloak-admin-password \
+      --from-literal=password='YOUR_SECURE_PASSWORD' \
+      -n {{ .Release.Namespace }}
+
+  Then reference it in your values.yaml:
+
+    admin:
+      username: admin
+      password:
+        secretName: keycloak-admin-password
+        secretKey: password
+
+  IMPORTANT: The admin user is only created on the first startup of a
+  fresh Keycloak instance. If the database already contains users, the
+  KEYCLOAK_ADMIN / KEYCLOAK_ADMIN_PASSWORD environment variables are
+  ignored. To reset credentials on an existing instance, use the
+  Keycloak CLI (kcadm.sh) or the Admin REST API.
+{{- else }}
+
+  WARNING: No admin credentials are configured. Keycloak will start
+  without an initial admin user. To create one, set these values:
+
+    admin:
+      username: admin
+      password:
+        secretName: <your-secret-name>
+        secretKey: password
+
+  The Secret must exist in the release namespace and contain the
+  admin password. Create it with:
+
+    kubectl create secret generic keycloak-admin-password \
+      --from-literal=password='YOUR_SECURE_PASSWORD' \
+      -n {{ .Release.Namespace }}
 {{- end }}
+
+─────────────────────────────────────────────────────────────────────────
+Accessing the Admin Console:
+{{- if .Values.ingress.enabled }}
+  {{- range .Values.ingress.hosts }}
+
+  Open https://{{ .host }}/admin in your browser.
+  {{- end }}
+{{- else }}
+
+  Port-forward the HTTP service to access the admin console locally:
+
+    kubectl port-forward svc/{{ include "keycloak.fullname" . }} 8080:{{ .Values.service.httpPort }} -n {{ .Release.Namespace }}
+
+  Then open http://localhost:8080/admin in your browser.
+{{- end }}
+
+─────────────────────────────────────────────────────────────────────────
+REST API Quick Start:
+
+  1. Obtain an admin access token:
+
+     TOKEN=$(curl -s -X POST \
+       http://localhost:8080/realms/master/protocol/openid-connect/token \
+       -d "client_id=admin-cli" \
+       -d "username={{ .Values.admin.username | default "admin" }}" \
+       -d "password=<your-admin-password>" \
+       -d "grant_type=password" | jq -r '.access_token')
+
+  2. Use the token to call the Admin REST API:
+
+     curl -H "Authorization: Bearer $TOKEN" \
+       http://localhost:8080/admin/realms
 
 {{- if eq .Values.database.type "dev" }}
 
-  NOTE: You are using the embedded H2 development database.
-  This is NOT suitable for production use. Configure an external
-  PostgreSQL, MySQL, or MSSQL database for production deployments.
+─────────────────────────────────────────────────────────────────────────
+WARNING: Development Database
+
+  You are using the embedded H2 development database (database.type=dev).
+  This is NOT suitable for production use:
+  - Data is not persisted across pod restarts
+  - Clustering is not supported with H2
+  - Performance is significantly lower than a dedicated database
+
+  For production deployments, configure an external database:
+
+    database:
+      type: postgresql          # or: mysql, mssql
+      host: your-db-host.example.com
+      port: 5432
+      name: keycloak
+      user: keycloak
+      password:
+        secretName: keycloak-db-password
+        secretKey: password
 {{- end }}

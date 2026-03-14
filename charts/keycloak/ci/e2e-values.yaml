@@ -1,8 +1,18 @@
+# E2E test values — dev mode (embedded H2) in a kind cluster.
+#
+# This configuration:
+# - Uses the embedded H2 dev database (no external DB)
+# - Sets admin credentials for API testing
+# - Increases startup probe tolerance for slow CI environments
+
 database:
   type: dev
 
-service:
-  type: ClusterIP
+admin:
+  username: admin
+  password:
+    secretName: keycloak-admin-password
+    secretKey: password
 
 startupProbe:
   httpGet:

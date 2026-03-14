@@ -1,0 +1,29 @@
+# E2E test values — PostgreSQL backend in a kind cluster.
+#
+# The e2e script deploys postgres via a simple Deployment + Service
+# and creates the password secret before chart install.
+
+database:
+  type: postgresql
+  host: "postgres.keycloak-e2e.svc.cluster.local"
+  port: 5432
+  user: keycloak
+  name: keycloak
+  password:
+    secretName: keycloak-db-password
+    secretKey: password
+
+admin:
+  username: admin
+  password:
+    secretName: keycloak-admin-password
+    secretKey: password
+
+startupProbe:
+  httpGet:
+    path: /health/started
+    port: management
+  initialDelaySeconds: 30
+  periodSeconds: 5
+  failureThreshold: 120
+  timeoutSeconds: 3
