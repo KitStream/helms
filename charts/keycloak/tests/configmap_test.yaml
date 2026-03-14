@@ -1,0 +1,232 @@
+suite: configmap tests
+templates:
+  - templates/configmap.yaml
+tests:
+  - it: should render a ConfigMap
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ConfigMap
+
+  - it: should include health and metrics by default
+    asserts:
+      - equal:
+          path: data.KC_HEALTH_ENABLED
+          value: "true"
+      - equal:
+          path: data.KC_METRICS_ENABLED
+          value: "true"
+
+  - it: should set log level
+    set:
+      logLevel: "debug"
+    asserts:
+      - equal:
+          path: data.KC_LOG_LEVEL
+          value: "debug"
+
+  - it: should set hostname when configured
+    set:
+      hostname: keycloak.example.com
+    asserts:
+      - equal:
+          path: data.KC_HOSTNAME
+          value: "keycloak.example.com"
+
+  - it: should not set hostname when empty
+    asserts:
+      - notExists:
+          path: data.KC_HOSTNAME
+
+  - it: should set admin hostname when configured
+    set:
+      hostnameAdmin: admin.example.com
+    asserts:
+      - equal:
+          path: data.KC_HOSTNAME_ADMIN
+          value: "admin.example.com"
+
+  - it: should set hostname strict
+    asserts:
+      - equal:
+          path: data.KC_HOSTNAME_STRICT
+          value: "true"
+
+  - it: should set proxy headers when configured
+    set:
+      proxyHeaders: xforwarded
+    asserts:
+      - equal:
+          path: data.KC_PROXY_HEADERS
+          value: "xforwarded"
+
+  - it: should not set proxy headers when empty
+    asserts:
+      - notExists:
+          path: data.KC_PROXY_HEADERS
+
+  - it: should set features when configured
+    set:
+      features: "token-exchange,admin-fine-grained-authz"
+    asserts:
+      - equal:
+          path: data.KC_FEATURES
+          value: "token-exchange,admin-fine-grained-authz"
+
+  - it: should set TLS certificate paths when enabled
+    set:
+      tls.enabled: true
+      tls.secretName: kc-tls
+    asserts:
+      - equal:
+          path: data.KC_HTTPS_CERTIFICATE_FILE
+          value: "/opt/keycloak/conf/tls/tls.crt"
+      - equal:
+          path: data.KC_HTTPS_CERTIFICATE_KEY_FILE
+          value: "/opt/keycloak/conf/tls/tls.key"
+
+  - it: should not set TLS paths when disabled
+    asserts:
+      - notExists:
+          path: data.KC_HTTPS_CERTIFICATE_FILE
+
+  # ── Database ──────────────────────────────────────────────────────────
+
+  - it: should not set DB vars for dev database
+    asserts:
+      - notExists:
+          path: data.KC_DB
+
+  - it: should set PostgreSQL database vars
+    set:
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: keycloak
+      database.name: keycloak
+      database.password.secretName: pg-secret
+    asserts:
+      - equal:
+          path: data.KC_DB
+          value: "postgres"
+      - equal:
+          path: data.KC_DB_URL_HOST
+          value: "pg.example.com"
+      - equal:
+          path: data.KC_DB_URL_PORT
+          value: "5432"
+      - equal:
+          path: data.KC_DB_URL_DATABASE
+          value: "keycloak"
+      - equal:
+          path: data.KC_DB_USERNAME
+          value: "keycloak"
+
+  - it: should set MySQL database vars
+    set:
+      database.type: mysql
+      database.host: mysql.example.com
+      database.user: keycloak
+      database.name: keycloak
+      database.password.secretName: mysql-secret
+    asserts:
+      - equal:
+          path: data.KC_DB
+          value: "mysql"
+      - equal:
+          path: data.KC_DB_URL_PORT
+          value: "3306"
+
+  - it: should set MSSQL database vars
+    set:
+      database.type: mssql
+      database.host: mssql.example.com
+      database.user: keycloak
+      database.name: keycloak
+      database.password.secretName: mssql-secret
+    asserts:
+      - equal:
+          path: data.KC_DB
+          value: "mssql"
+      - equal:
+          path: data.KC_DB_URL_PORT
+          value: "1433"
+
+  - it: should use custom database port
+    set:
+      database.type: postgresql
+      database.host: pg.example.com
+      database.port: 5433
+      database.user: keycloak
+      database.name: keycloak
+      database.password.secretName: pg-secret
+    asserts:
+      - equal:
+          path: data.KC_DB_URL_PORT
+          value: "5433"
+
+  - it: should set connection pool sizes when configured
+    set:
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: keycloak
+      database.name: keycloak
+      database.password.secretName: pg-secret
+      database.poolMinSize: "5"
+      database.poolInitialSize: "10"
+      database.poolMaxSize: "50"
+    asserts:
+      - equal:
+          path: data.KC_DB_POOL_MIN_SIZE
+          value: "5"
+      - equal:
+          path: data.KC_DB_POOL_INITIAL_SIZE
+          value: "10"
+      - equal:
+          path: data.KC_DB_POOL_MAX_SIZE
+          value: "50"
+
+  - it: should set PostgreSQL SSL mode
+    set:
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: keycloak
+      database.name: keycloak
+      database.password.secretName: pg-secret
+      database.sslMode: "verify-full"
+    asserts:
+      - equal:
+          path: data.KC_DB_URL_PROPERTIES
+          value: "?sslmode=verify-full"
+
+  # ── Clustering ────────────────────────────────────────────────────────
+
+  - it: should set jdbc-ping cache stack by default
+    asserts:
+      - equal:
+          path: data.KC_CACHE
+          value: "ispn"
+      - equal:
+          path: data.KC_CACHE_STACK
+          value: "jdbc-ping"
+
+  - it: should configure kubernetes cache stack with dns query
+    set:
+      cache.stack: kubernetes
+    asserts:
+      - equal:
+          path: data.KC_CACHE_STACK
+          value: "kubernetes"
+      - equal:
+          path: data.KC_CACHE_CONFIG_FILE
+          value: "cache-ispn.xml"
+      - equal:
+          path: data.JAVA_OPTS_APPEND
+          value: "-Djgroups.dns.query=RELEASE-NAME-keycloak-headless.NAMESPACE.svc.cluster.local"
+
+  - it: should not set dns query for jdbc-ping
+    asserts:
+      - notExists:
+          path: data.JAVA_OPTS_APPEND
+      - notExists:
+          path: data.KC_CACHE_CONFIG_FILE

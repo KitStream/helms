@@ -1,0 +1,49 @@
+suite: headless service tests
+templates:
+  - templates/headless-service.yaml
+tests:
+  - it: should render a headless Service
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Service
+      - equal:
+          path: spec.clusterIP
+          value: None
+
+  - it: should expose jgroups port
+    asserts:
+      - contains:
+          path: spec.ports
+          content:
+            name: jgroups
+            port: 7800
+            targetPort: jgroups
+            protocol: TCP
+
+  - it: should use custom jgroups port
+    set:
+      headlessService.jgroupsPort: 7801
+    asserts:
+      - contains:
+          path: spec.ports
+          content:
+            name: jgroups
+            port: 7801
+            targetPort: jgroups
+            protocol: TCP
+
+  - it: should include selector labels
+    asserts:
+      - isSubset:
+          path: spec.selector
+          content:
+            app.kubernetes.io/name: keycloak
+            app.kubernetes.io/instance: RELEASE-NAME
+
+  - it: should have -headless suffix in name
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-keycloak-headless

@@ -1,0 +1,34 @@
+apiVersion: v2
+name: keycloak
+description: A Helm chart for deploying Keycloak IAM using the upstream quay.io/keycloak/keycloak image on Kubernetes
+type: application
+version: 0.1.0
+appVersion: "26.5.0"
+keywords:
+  - keycloak
+  - iam
+  - identity
+  - authentication
+  - oauth2
+  - oidc
+  - sso
+  - self-hosted
+  - kubernetes
+home: https://www.keycloak.org
+sources:
+  - https://github.com/keycloak/keycloak
+  - https://github.com/KitStream/helms
+maintainers:
+  - name: KitStream
+    url: https://github.com/KitStream
+icon: https://www.keycloak.org/resources/images/keycloak_icon_512px.svg
+annotations:
+  artifacthub.io/license: Apache-2.0
+  artifacthub.io/links: |
+    - name: Keycloak
+      url: https://www.keycloak.org
+    - name: Source
+      url: https://github.com/KitStream/helms
+  artifacthub.io/changes: |
+    - kind: added
+      description: Initial Keycloak chart with upstream image support

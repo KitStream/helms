@@ -1,0 +1,14 @@
+database:
+  type: dev
+
+service:
+  type: ClusterIP
+
+startupProbe:
+  httpGet:
+    path: /health/started
+    port: management
+  initialDelaySeconds: 30
+  periodSeconds: 5
+  failureThreshold: 120
+  timeoutSeconds: 3

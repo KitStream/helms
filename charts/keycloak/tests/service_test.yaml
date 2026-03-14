@@ -1,0 +1,79 @@
+suite: service tests
+templates:
+  - templates/service.yaml
+tests:
+  - it: should render a Service
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Service
+
+  - it: should use ClusterIP type by default
+    asserts:
+      - equal:
+          path: spec.type
+          value: ClusterIP
+
+  - it: should expose http and management ports
+    asserts:
+      - contains:
+          path: spec.ports
+          content:
+            name: http
+            port: 8080
+            targetPort: http
+            protocol: TCP
+      - contains:
+          path: spec.ports
+          content:
+            name: management
+            port: 9000
+            targetPort: management
+            protocol: TCP
+
+  - it: should use custom service type
+    set:
+      service.type: NodePort
+    asserts:
+      - equal:
+          path: spec.type
+          value: NodePort
+
+  - it: should use custom ports
+    set:
+      service.httpPort: 8081
+      service.managementPort: 9001
+    asserts:
+      - contains:
+          path: spec.ports
+          content:
+            name: http
+            port: 8081
+            targetPort: http
+            protocol: TCP
+      - contains:
+          path: spec.ports
+          content:
+            name: management
+            port: 9001
+            targetPort: management
+            protocol: TCP
+
+  - it: should include selector labels
+    asserts:
+      - isSubset:
+          path: spec.selector
+          content:
+            app.kubernetes.io/name: keycloak
+            app.kubernetes.io/instance: RELEASE-NAME
+
+  - it: should add annotations when set
+    set:
+      service.annotations:
+        service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    asserts:
+      - isSubset:
+          path: metadata.annotations
+          content:
+            service.beta.kubernetes.io/aws-load-balancer-type: nlb

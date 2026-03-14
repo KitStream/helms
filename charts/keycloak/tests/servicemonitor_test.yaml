@@ -1,0 +1,63 @@
+suite: servicemonitor tests
+templates:
+  - templates/servicemonitor.yaml
+tests:
+  - it: should not render by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not render when only metrics are enabled
+    set:
+      metrics.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render when serviceMonitor is enabled
+    set:
+      metrics.enabled: true
+      metrics.serviceMonitor.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ServiceMonitor
+
+  - it: should target management port
+    set:
+      metrics.enabled: true
+      metrics.serviceMonitor.enabled: true
+    asserts:
+      - equal:
+          path: spec.endpoints[0].port
+          value: management
+      - equal:
+          path: spec.endpoints[0].path
+          value: /metrics
+
+  - it: should add custom labels
+    set:
+      metrics.enabled: true
+      metrics.serviceMonitor.enabled: true
+      metrics.serviceMonitor.labels:
+        release: prometheus
+    asserts:
+      - isSubset:
+          path: metadata.labels
+          content:
+            release: prometheus
+
+  - it: should set interval and scrapeTimeout
+    set:
+      metrics.enabled: true
+      metrics.serviceMonitor.enabled: true
+      metrics.serviceMonitor.interval: 30s
+      metrics.serviceMonitor.scrapeTimeout: 10s
+    asserts:
+      - equal:
+          path: spec.endpoints[0].interval
+          value: 30s
+      - equal:
+          path: spec.endpoints[0].scrapeTimeout
+          value: 10s
