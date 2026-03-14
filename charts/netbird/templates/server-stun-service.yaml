@@ -5,10 +5,10 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "netbird.server.labels" . | nindent 4 }}
-  {{- with .Values.server.stunService.annotations }}
+{{- with .Values.server.stunService.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
-  {{- end }}
+{{- end }}
 spec:
   type: {{ .Values.server.stunService.type }}
   ports:

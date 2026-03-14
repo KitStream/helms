@@ -8,7 +8,7 @@ metadata:
 data:
   config.yaml.tpl: |
     {{- include "netbird.server.configTemplate" . | nindent 4 }}
-  {{- if eq (include "netbird.database.isExternal" .) "true" }}
+{{- if eq (include "netbird.database.isExternal" .) "true" }}
   seed.yaml: |
     {{- include "netbird.database.seedSpec" . | nindent 4 }}
-  {{- end }}
+{{- end }}

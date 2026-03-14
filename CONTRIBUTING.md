@@ -56,6 +56,7 @@ When bringing in or upgrading a chart from the community:
 ### General Standards
 
 - Run `dprint fmt` to format markdown files before submitting.
+- Run `helmfmt charts/<chart-name>` to format Helm templates before submitting (install via `go install github.com/digitalstudium/helmfmt@latest`).
 - Use `helm lint` to validate charts before submitting.
 - Use `helm template` to verify rendered manifests.
 - Follow [Kubernetes naming conventions](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/).
