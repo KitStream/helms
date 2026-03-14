@@ -53,7 +53,7 @@ If the version bump includes a **minor** (or major) version change, run:
 make compat-matrix
 ```
 
-This tests the chart against the last 5 NetBird server minor versions and updates `docs/compatibility.md` with a new row for the new chart minor. The updated file will be included in the release commit.
+This tests the chart against the last 5 NetBird server minor versions and updates `charts/netbird/docs/compatibility.md` with a new row for the new chart minor. The updated file will be included in the release commit.
 
 Skip this step for patch-only bumps — the existing row already covers the current chart minor.
 
