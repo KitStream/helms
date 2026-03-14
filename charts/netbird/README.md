@@ -26,7 +26,7 @@ For external databases (PostgreSQL, MySQL), the chart automatically:
 
 - Kubernetes 1.24+ (1.28+ required for SQLite PAT seeding with native sidecars)
 - Helm 3.x
-- An OAuth2 / OIDC identity provider (Auth0, Keycloak, Authentik, Zitadel, etc.)
+- An OAuth2 / OIDC identity provider (Auth0, Keycloak, Authentik, Zitadel, etc.) **or** NetBird's built-in embedded IdP
 - An Ingress controller (nginx recommended) with TLS termination
 
 ## Installation
@@ -49,6 +49,32 @@ helm install netbird ./charts/netbird \
 ```
 
 ## Minimal Configuration Example
+
+### Embedded IdP (no external provider)
+
+NetBird includes a built-in identity provider, so an external OAuth2/OIDC
+provider is **not required**. To use the embedded IdP, set the issuer to
+`https://<your-domain>/oauth2` and configure `managerType: "embedded"`:
+
+```yaml
+server:
+  config:
+    exposedAddress: "https://netbird.example.com"
+    auth:
+      issuer: "https://netbird.example.com/oauth2"
+      dashboardRedirectURIs:
+        - "https://netbird.example.com/nb-auth"
+        - "https://netbird.example.com/nb-silent-auth"
+
+oidc:
+  enabled: true
+  idpManager:
+    enabled: true
+    managerType: "embedded"
+```
+
+With this setup you manage users through the NetBird dashboard's `/setup`
+endpoint — no Keycloak, Auth0, or other external IdP is needed.
 
 ### SQLite (default)
 
