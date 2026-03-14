@@ -1,4 +1,4 @@
-.PHONY: lint unittest e2e e2e-sqlite e2e-postgres e2e-mysql e2e-oidc-keycloak e2e-oidc-zitadel e2e-setup e2e-teardown test compat-matrix
+.PHONY: lint unittest e2e e2e-sqlite e2e-postgres e2e-mysql e2e-oidc-keycloak e2e-oidc-zitadel e2e-keycloak-dev e2e-keycloak-postgres e2e-keycloak-replicas e2e-keycloak e2e-setup e2e-teardown test compat-matrix
 
 CHARTS := $(wildcard charts/*)
 
@@ -41,12 +41,29 @@ e2e-oidc-keycloak: e2e-setup
 e2e-oidc-zitadel: e2e-setup
 	ci/scripts/e2e-oidc.sh zitadel
 
+e2e-keycloak-dev: e2e-setup
+	ci/scripts/e2e-keycloak.sh dev
+
+e2e-keycloak-postgres: e2e-setup
+	ci/scripts/e2e-keycloak.sh postgres
+
+e2e-keycloak-replicas: e2e-setup
+	ci/scripts/e2e-keycloak.sh replicas
+
+e2e-keycloak: e2e-setup
+	ci/scripts/e2e-keycloak.sh dev
+	ci/scripts/e2e-keycloak.sh postgres
+	ci/scripts/e2e-keycloak.sh replicas
+
 e2e: e2e-setup
 	ci/scripts/e2e.sh sqlite
 	ci/scripts/e2e.sh postgres
 	ci/scripts/e2e.sh mysql
 	ci/scripts/e2e-oidc.sh keycloak
 	ci/scripts/e2e-oidc.sh zitadel
+	ci/scripts/e2e-keycloak.sh dev
+	ci/scripts/e2e-keycloak.sh postgres
+	ci/scripts/e2e-keycloak.sh replicas
 
 e2e-teardown:
 	kind delete cluster --name $(E2E_CLUSTER) 2>/dev/null || true
