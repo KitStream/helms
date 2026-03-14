@@ -29,3 +29,15 @@ charts:
         targets:
           - file: Chart.yaml
             yaml_path: .appVersion
+
+  - name: keycloak
+    path: charts/keycloak
+    sources:
+      - name: keycloak
+        github: keycloak/keycloak
+        strip_v_prefix: false
+        targets:
+          - file: Chart.yaml
+            yaml_path: .appVersion
+          - file: Chart.yaml
+            yaml_path: .version
