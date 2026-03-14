@@ -60,8 +60,8 @@ database:
 hostname: ""
 # -- Separate admin console hostname (maps to KC_HOSTNAME_ADMIN)
 hostnameAdmin: ""
-# -- Enforce strict hostname checking (maps to KC_HOSTNAME_STRICT)
-hostnameStrict: true
+# -- Enforce strict hostname checking (maps to KC_HOSTNAME_STRICT). Set to true when hostname is configured.
+hostnameStrict: false
 
 # ── Proxy / TLS ──────────────────────────────────────────────────────────
 # -- Proxy header mode: "xforwarded" or "forwarded" (maps to KC_PROXY_HEADERS)
