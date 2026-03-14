@@ -117,10 +117,10 @@ KC_HTTP_ENABLED: {{ .Values.httpEnabled | quote }}
 {{- if .Values.hostname }}
 KC_HOSTNAME: {{ .Values.hostname | quote }}
 {{- end }}
+KC_HOSTNAME_STRICT: {{ .Values.hostnameStrict | quote }}
 {{- if .Values.hostnameAdmin }}
 KC_HOSTNAME_ADMIN: {{ .Values.hostnameAdmin | quote }}
 {{- end }}
-KC_HOSTNAME_STRICT: {{ .Values.hostnameStrict | quote }}
 {{- if .Values.proxyHeaders }}
 KC_PROXY_HEADERS: {{ .Values.proxyHeaders | quote }}
 {{- end }}

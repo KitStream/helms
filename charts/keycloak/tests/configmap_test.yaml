@@ -47,7 +47,16 @@ tests:
           path: data.KC_HOSTNAME_ADMIN
           value: "admin.example.com"
 
-  - it: should set hostname strict
+  - it: should default hostname strict to false
+    asserts:
+      - equal:
+          path: data.KC_HOSTNAME_STRICT
+          value: "false"
+
+  - it: should set hostname strict to true when configured
+    set:
+      hostname: keycloak.example.com
+      hostnameStrict: true
     asserts:
       - equal:
           path: data.KC_HOSTNAME_STRICT
