@@ -10,5 +10,3 @@
 # Helm
 *.tgz
 charts/*/charts/*.tgz
-
-CLAUDE.md
