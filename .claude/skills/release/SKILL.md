@@ -43,7 +43,19 @@ Present the proposed version bump to the user (current version -> new version) a
   - `remove` -> `removed`
 - Use the commit subject (without the conventional commit prefix) as the description
 
-## 4. Run tests
+## 4. Update compatibility matrix (minor version bumps only)
+
+If the version bump includes a **minor** (or major) version change, run:
+
+```
+make compat-matrix
+```
+
+This tests the chart against the last 5 NetBird server minor versions and updates `docs/compatibility.md` with a new row for the new chart minor. The updated file will be included in the release commit.
+
+Skip this step for patch-only bumps — the existing row already covers the current chart minor.
+
+## 5. Run tests
 
 Run the full test suite for the chart:
 ```
@@ -52,7 +64,7 @@ make test
 
 If tests fail, fix the issue before continuing.
 
-## 5. Commit and create PR
+## 6. Commit and create PR
 
 - Create a new branch from origin/main named `release/<chart-name>-<new-version>`
 - Commit with message: `chore: prepare <chart-name> v<new-version> release`
