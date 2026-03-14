@@ -7,6 +7,39 @@ on:
     branches: [main]
 
 jobs:
+  # ── Detect which charts changed ──────────────────────────────────────
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      netbird: ${{ steps.filter.outputs.netbird }}
+      keycloak: ${{ steps.filter.outputs.keycloak }}
+      ci: ${{ steps.filter.outputs.ci }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            netbird:
+              - 'charts/netbird/**'
+              - 'ci/scripts/e2e.sh'
+              - 'ci/scripts/e2e-oidc.sh'
+            keycloak:
+              - 'charts/keycloak/**'
+              - 'ci/scripts/e2e-keycloak.sh'
+            ci:
+              - '.github/workflows/ci.yaml'
+              - 'Makefile'
+              - 'dprint.json'
+              - '.helmfmt'
+
+  # ── Format check (always runs) ──────────────────────────────────────
   format-check:
     name: Format Check
     runs-on: ubuntu-latest
@@ -39,6 +72,7 @@ jobs:
             exit 1
           fi
 
+  # ── Lint & unit test (always runs) ──────────────────────────────────
   lint-and-unit-test:
     name: Lint & Unit Test
     runs-on: ubuntu-latest
@@ -70,10 +104,12 @@ jobs:
             fi
           done
 
+  # ── NetBird E2E tests (only when netbird chart or CI config changes) ─
   e2e-sqlite:
-    name: E2E — SQLite
+    name: "E2E — NetBird: SQLite"
     runs-on: ubuntu-latest
-    needs: lint-and-unit-test
+    needs: [detect-changes, lint-and-unit-test]
+    if: needs.detect-changes.outputs.netbird == 'true' || needs.detect-changes.outputs.ci == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -104,9 +140,10 @@ jobs:
           kubectl -n netbird-e2e get events --sort-by='.lastTimestamp' || true
 
   e2e-postgres:
-    name: E2E — PostgreSQL
+    name: "E2E — NetBird: PostgreSQL"
     runs-on: ubuntu-latest
-    needs: lint-and-unit-test
+    needs: [detect-changes, lint-and-unit-test]
+    if: needs.detect-changes.outputs.netbird == 'true' || needs.detect-changes.outputs.ci == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -139,9 +176,10 @@ jobs:
           kubectl -n netbird-e2e get events --sort-by='.lastTimestamp' || true
 
   e2e-mysql:
-    name: E2E — MySQL
+    name: "E2E — NetBird: MySQL"
     runs-on: ubuntu-latest
-    needs: lint-and-unit-test
+    needs: [detect-changes, lint-and-unit-test]
+    if: needs.detect-changes.outputs.netbird == 'true' || needs.detect-changes.outputs.ci == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -174,9 +212,10 @@ jobs:
           kubectl -n netbird-e2e get events --sort-by='.lastTimestamp' || true
 
   e2e-oidc-embedded:
-    name: E2E — OIDC (Embedded IdP)
+    name: "E2E — NetBird: OIDC (Embedded IdP)"
     runs-on: ubuntu-latest
-    needs: lint-and-unit-test
+    needs: [detect-changes, lint-and-unit-test]
+    if: needs.detect-changes.outputs.netbird == 'true' || needs.detect-changes.outputs.ci == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -207,9 +246,10 @@ jobs:
           kubectl -n netbird-e2e get events --sort-by='.lastTimestamp' || true
 
   e2e-oidc-keycloak:
-    name: E2E — OIDC (Keycloak)
+    name: "E2E — NetBird: OIDC (Keycloak)"
     runs-on: ubuntu-latest
-    needs: lint-and-unit-test
+    needs: [detect-changes, lint-and-unit-test]
+    if: needs.detect-changes.outputs.netbird == 'true' || needs.detect-changes.outputs.ci == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -242,9 +282,10 @@ jobs:
           kubectl -n netbird-e2e get events --sort-by='.lastTimestamp' || true
 
   e2e-oidc-zitadel:
-    name: E2E — OIDC (Zitadel)
+    name: "E2E — NetBird: OIDC (Zitadel)"
     runs-on: ubuntu-latest
-    needs: lint-and-unit-test
+    needs: [detect-changes, lint-and-unit-test]
+    if: needs.detect-changes.outputs.netbird == 'true' || needs.detect-changes.outputs.ci == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -277,3 +318,104 @@ jobs:
           kubectl -n netbird-e2e logs deployment/zitadel-db --tail=50 || true
           echo "=== Events ==="
           kubectl -n netbird-e2e get events --sort-by='.lastTimestamp' || true
+
+  # ── Keycloak E2E tests (only when keycloak chart or CI config changes) ─
+  e2e-keycloak-dev:
+    name: "E2E — Keycloak: Dev"
+    runs-on: ubuntu-latest
+    needs: [detect-changes, lint-and-unit-test]
+    if: needs.detect-changes.outputs.keycloak == 'true' || needs.detect-changes.outputs.ci == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v4.0.2
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: helms-e2e
+
+      - name: Run e2e test (keycloak dev)
+        run: ci/scripts/e2e-keycloak.sh dev
+
+      - name: Show debug info on failure
+        if: failure()
+        run: |
+          echo "=== Pod status ==="
+          kubectl -n keycloak-e2e get pods -o wide || true
+          echo "=== Keycloak logs ==="
+          kubectl -n keycloak-e2e logs deployment/keycloak-e2e-keycloak --tail=100 || true
+          echo "=== Events ==="
+          kubectl -n keycloak-e2e get events --sort-by='.lastTimestamp' || true
+
+  e2e-keycloak-postgres:
+    name: "E2E — Keycloak: PostgreSQL"
+    runs-on: ubuntu-latest
+    needs: [detect-changes, lint-and-unit-test]
+    if: needs.detect-changes.outputs.keycloak == 'true' || needs.detect-changes.outputs.ci == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v4.0.2
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: helms-e2e
+
+      - name: Run e2e test (keycloak postgres)
+        run: ci/scripts/e2e-keycloak.sh postgres
+
+      - name: Show debug info on failure
+        if: failure()
+        run: |
+          echo "=== Pod status ==="
+          kubectl -n keycloak-e2e get pods -o wide || true
+          echo "=== Keycloak logs ==="
+          kubectl -n keycloak-e2e logs deployment/keycloak-e2e-keycloak --tail=100 || true
+          echo "=== PostgreSQL logs ==="
+          kubectl -n keycloak-e2e logs deployment/postgres --tail=50 || true
+          echo "=== Events ==="
+          kubectl -n keycloak-e2e get events --sort-by='.lastTimestamp' || true
+
+  e2e-keycloak-replicas:
+    name: "E2E — Keycloak: Replicas"
+    runs-on: ubuntu-latest
+    needs: [detect-changes, lint-and-unit-test]
+    if: needs.detect-changes.outputs.keycloak == 'true' || needs.detect-changes.outputs.ci == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v4.0.2
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: helms-e2e
+
+      - name: Run e2e test (keycloak replicas)
+        run: ci/scripts/e2e-keycloak.sh replicas
+
+      - name: Show debug info on failure
+        if: failure()
+        run: |
+          echo "=== Pod status ==="
+          kubectl -n keycloak-e2e get pods -o wide || true
+          echo "=== Keycloak logs ==="
+          kubectl -n keycloak-e2e logs deployment/keycloak-e2e-keycloak --tail=100 || true
+          echo "=== PostgreSQL logs ==="
+          kubectl -n keycloak-e2e logs deployment/postgres --tail=50 || true
+          echo "=== Events ==="
+          kubectl -n keycloak-e2e get events --sort-by='.lastTimestamp' || true
