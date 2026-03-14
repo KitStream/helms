@@ -5,10 +5,10 @@ database configuration introduced in the NetBird Helm chart.
 
 ## Files
 
-| File | Description |
-|------|-------------|
+| File                                               | Description                          |
+| -------------------------------------------------- | ------------------------------------ |
 | [`postgresql-values.yaml`](postgresql-values.yaml) | Full example with PostgreSQL backend |
-| [`mysql-values.yaml`](mysql-values.yaml) | Full example with MySQL backend |
+| [`mysql-values.yaml`](mysql-values.yaml)           | Full example with MySQL backend      |
 
 ## How It Works
 
@@ -69,4 +69,3 @@ resolves at runtime from the `DB_PASSWORD` environment variable (injected via
 `secretKeyRef` from your password Secret). Initium v2's structured connection
 config builds the connection internally, so passwords with special characters
 work without any URL encoding.
-

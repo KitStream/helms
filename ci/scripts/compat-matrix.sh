@@ -336,6 +336,11 @@ mkdir -p "$(dirname "$COMPAT_FILE")"
   done
 } > "$COMPAT_FILE"
 
+# Format with dprint if available
+if command -v dprint &>/dev/null; then
+  dprint fmt "$COMPAT_FILE" 2>/dev/null || true
+fi
+
 log "Compatibility matrix written to $COMPAT_FILE"
 
 # ── Print summary ───────────────────────────────────────────────────

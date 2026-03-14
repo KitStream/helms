@@ -139,4 +139,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Unit tests for init container ordering, env var injection, and database-specific
   rendering (120 tests, up from 110).
 - CHANGELOG.md.
-
