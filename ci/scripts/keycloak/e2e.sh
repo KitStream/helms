@@ -3,7 +3,7 @@
 # E2E test runner for the keycloak Helm chart.
 #
 # Usage:
-#   ci/scripts/e2e-keycloak.sh <scenario>
+#   ci/scripts/keycloak/e2e.sh <scenario>
 #
 # Scenarios:
 #   dev       — embedded H2 dev mode (single replica, no external DB)
