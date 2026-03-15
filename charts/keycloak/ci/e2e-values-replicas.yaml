@@ -15,6 +15,8 @@ database:
     secretName: keycloak-db-password
     secretKey: password
 
+hostname: "keycloak-e2e.keycloak-e2e.svc.cluster.local"
+
 cache:
   stack: kubernetes
 
