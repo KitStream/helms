@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Changed
+
+- **netbird**: Bump appVersion from 0.66.4 to 0.67.0.
+  See [v0.67.0 release notes](https://github.com/netbirdio/netbird/releases/tag/v0.67.0).
+
 ### Fixed
 
 - **netbird**: Bump Initium from 2.0.0 to 2.1.0 to fix a regression in
