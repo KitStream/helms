@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+## [0.3.2] — 2026-03-28
+
 ### Changed
 
 - **netbird**: Bump appVersion from 0.66.4 to 0.67.0.
