@@ -2,7 +2,7 @@ apiVersion: v2
 name: netbird
 description: A Helm chart for deploying NetBird VPN management, signal, dashboard, and relay services on Kubernetes
 type: application
-version: 0.3.1
+version: 0.3.2
 appVersion: "0.67.0"
 keywords:
   - netbird
