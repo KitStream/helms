@@ -13,7 +13,7 @@ tests:
     asserts:
       - equal:
           path: spec.template.spec.containers[0].image
-          value: "netbirdio/netbird-server:0.67.0"
+          value: "netbirdio/netbird-server:0.67.1"
 
   - it: should use custom image tag when set
     set:
