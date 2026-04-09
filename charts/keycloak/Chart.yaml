@@ -2,8 +2,8 @@ apiVersion: v2
 name: keycloak
 description: A Helm chart for deploying Keycloak IAM using the upstream quay.io/keycloak/keycloak image on Kubernetes
 type: application
-version: 26.5.7
-appVersion: "26.5.7"
+version: 26.6.0
+appVersion: "26.6.0"
 keywords:
   - keycloak
   - iam
@@ -31,6 +31,6 @@ annotations:
       url: https://github.com/KitStream/helms
   artifacthub.io/changes: |
     - kind: changed
-      description: Bump Keycloak from 26.5.6 to 26.5.7 (security and bugfix release)
-    - kind: security
-      description: Includes 7 upstream CVE fixes (see Keycloak 26.5.7 release notes)
+      description: Bump Keycloak from 26.5.7 to 26.6.0 (feature release)
+    - kind: added
+      description: "Upstream highlights: JWT Authorization Grant, Federated client authentication, Workflows, zero-downtime patch releases"

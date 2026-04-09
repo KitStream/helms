@@ -13,7 +13,7 @@ tests:
     asserts:
       - equal:
           path: spec.template.spec.containers[0].image
-          value: "quay.io/keycloak/keycloak:26.5.7"
+          value: "quay.io/keycloak/keycloak:26.6.0"
 
   - it: should use custom image tag when set
     set:
@@ -29,7 +29,7 @@ tests:
     asserts:
       - equal:
           path: spec.template.spec.containers[0].image
-          value: "my-registry/keycloak:26.5.7"
+          value: "my-registry/keycloak:26.6.0"
 
   - it: should set replica count
     set:
@@ -262,7 +262,7 @@ tests:
     asserts:
       - equal:
           path: spec.template.spec.initContainers[0].image
-          value: "quay.io/keycloak/keycloak:26.5.7"
+          value: "quay.io/keycloak/keycloak:26.6.0"
 
   - it: should set hardened securityContext on build init container
     set:

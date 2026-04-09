@@ -6,6 +6,7 @@ All notable changes to the Keycloak Helm chart will be documented in this file.
 
 ### Changed
 
-- Bump Keycloak appVersion from 26.5.6 to 26.5.7 (security and bugfix release)
-  - Includes 7 CVE fixes and 1 bug fix
-  - See [upstream release notes](https://github.com/keycloak/keycloak/releases/tag/26.5.7) for details
+- Bump Keycloak appVersion from 26.5.7 to 26.6.0 (feature release)
+  - JWT Authorization Grant, Federated client authentication, Workflows now fully supported
+  - Zero-downtime patch releases
+  - See [upstream release notes](https://github.com/keycloak/keycloak/releases/tag/26.6.0) for details
