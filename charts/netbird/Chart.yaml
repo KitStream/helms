@@ -2,8 +2,8 @@ apiVersion: v2
 name: netbird
 description: A Helm chart for deploying NetBird VPN management, signal, dashboard, and relay services on Kubernetes
 type: application
-version: 0.3.3
-appVersion: "0.67.1"
+version: 0.3.4
+appVersion: "0.67.4"
 keywords:
   - netbird
   - vpn
@@ -31,4 +31,4 @@ annotations:
       url: https://github.com/KitStream/initium
   artifacthub.io/changes: |
     - kind: changed
-      description: Bump NetBird from 0.67.0 to 0.67.1
+      description: Bump NetBird from 0.67.1 to 0.67.4
