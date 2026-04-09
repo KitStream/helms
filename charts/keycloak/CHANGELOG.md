@@ -4,6 +4,10 @@ All notable changes to the Keycloak Helm chart will be documented in this file.
 
 ## Unreleased
 
+### Fixed
+
+- Fix broken chart icon URL — upstream Keycloak moved `keycloak_icon_512px.svg` to `icon.svg` (#64)
+
 ### Changed
 
 - Bump Keycloak appVersion from 26.5.7 to 26.6.0 (feature release)

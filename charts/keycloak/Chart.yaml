@@ -21,7 +21,7 @@ sources:
 maintainers:
   - name: KitStream
     url: https://github.com/KitStream
-icon: https://www.keycloak.org/resources/images/keycloak_icon_512px.svg
+icon: https://www.keycloak.org/resources/images/icon.svg
 annotations:
   artifacthub.io/license: Apache-2.0
   artifacthub.io/links: |
