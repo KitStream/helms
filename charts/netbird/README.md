@@ -202,6 +202,78 @@ dashboard:
           - netbird.example.com
 ```
 
+## STUN Networking
+
+NetBird's embedded STUN server uses **UDP port 3478**, which standard HTTP
+ingress controllers cannot proxy. The chart therefore creates a dedicated
+Kubernetes Service (`server.stunService`) for STUN traffic, separate from
+the HTTP ingress.
+
+NetBird clients derive the STUN URI from `server.config.exposedAddress` —
+the hostname in `exposedAddress` is combined with port 3478 to form
+`stun:<hostname>:3478`. This means the STUN hostname **must resolve to an
+IP that reaches the STUN service**.
+
+### Option 1: Separate LoadBalancer (default)
+
+The chart defaults to `server.stunService.type: LoadBalancer`, which
+provisions a dedicated external IP for UDP traffic. Because this IP
+differs from the ingress controller IP, you need a DNS record that points
+to the STUN LoadBalancer:
+
+```
+netbird.example.com      → Ingress IP      (HTTP / gRPC / Relay)
+stun.netbird.example.com → STUN LB IP      (UDP 3478)
+```
+
+Retrieve the STUN external IP after deployment:
+
+```bash
+kubectl get svc <release>-server-stun -n <namespace> \
+  -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+```
+
+If you use a separate hostname for STUN you will also need to configure a
+custom STUN URI in the NetBird server config so that clients connect to the
+correct address.
+
+### Option 2: Shared static IP (single DNS entry)
+
+On cloud providers that support static IP assignment you can give the
+**same IP** to both the ingress controller and the STUN LoadBalancer. A
+single DNS record then serves both HTTP and UDP traffic:
+
+```yaml
+server:
+  stunService:
+    type: LoadBalancer
+    port: 3478
+    annotations:
+      # GKE example:
+      networking.gke.io/load-balancer-ip-refs: "my-static-ip"
+      # AWS NLB with Elastic IP:
+      service.beta.kubernetes.io/aws-load-balancer-eip-allocations: "eipalloc-xxx"
+```
+
+Ensure your ingress controller's external Service also uses the same
+static IP so that `exposedAddress` resolves to one address for all
+protocols.
+
+### Option 3: NodePort
+
+Expose STUN on a fixed port across all cluster nodes. Useful when a cloud
+LoadBalancer is not available or when nodes already have public IPs:
+
+```yaml
+server:
+  stunService:
+    type: NodePort
+    port: 3478
+```
+
+Point DNS at one or more node IPs. Clients will connect on the allocated
+NodePort (check `kubectl get svc` for the assigned port).
+
 ## Personal Access Token (PAT) Seeding
 
 The chart can optionally seed the database with a Personal Access Token
@@ -685,7 +757,8 @@ ADFS) can be tested manually:
 └──────────────────────────────────────────────────────────┘
                                         │
                                STUN Service :3478/UDP
-                               (LoadBalancer)
+                               (LoadBalancer — separate IP,
+                                cannot use HTTP Ingress)
 ```
 
 ## Upstream Source
