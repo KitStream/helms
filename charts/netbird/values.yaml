@@ -306,7 +306,9 @@ server:
     exposedAddress: ""
 
     # -- List of UDP ports for the embedded STUN server.
-    # These ports must also be exposed via the stunService.
+    # These ports must also be exposed via the stunService. STUN uses UDP
+    # which cannot be proxied by standard HTTP ingress controllers — see
+    # the "STUN Networking" section in README.md for setup options.
     stunPorts:
       - 3478
 
@@ -407,6 +409,10 @@ server:
     port: 80
 
   # -- Dedicated service for the STUN/TURN UDP port.
+  # STUN uses UDP which cannot go through a standard HTTP ingress, so this
+  # service gets its own external IP by default (LoadBalancer). To use a
+  # single DNS entry, assign a shared static IP via annotations. See the
+  # "STUN Networking" section in README.md for detailed options.
   stunService:
     type: LoadBalancer
     port: 3478

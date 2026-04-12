@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Added
+
+- **netbird**: Document STUN networking setup in README — explains why STUN
+  needs a separate service (UDP), and covers options for LoadBalancer,
+  shared static IP, and NodePort configurations (#67).
+
 ## [0.4.0] — 2026-04-09
 
 ### Changed

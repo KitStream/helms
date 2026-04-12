@@ -4,6 +4,12 @@ Components:
   Server (Management + Signal + Relay + STUN):
     Service: {{ include "netbird.server.fullname" . }}:{{ .Values.server.service.port }}
     STUN Service: {{ include "netbird.server.fullname" . }}-stun:{{ .Values.server.stunService.port }} ({{ .Values.server.stunService.type }})
+    NOTE: STUN uses UDP and cannot go through HTTP ingress. Ensure DNS for
+    your exposedAddress resolves to an IP that reaches this service.
+{{- if eq .Values.server.stunService.type "LoadBalancer" }}
+    Retrieve the STUN external IP:
+      kubectl get svc {{ include "netbird.server.fullname" . }}-stun -n {{ .Release.Namespace }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+{{- end }}
 
 {{- if .Values.server.ingress.enabled }}
   Server HTTP Ingress (API + OAuth2):
