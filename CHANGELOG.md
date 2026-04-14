@@ -7,11 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+## [0.4.1] — 2026-04-14
+
 ### Added
 
 - **netbird**: Document STUN networking setup in README — explains why STUN
   needs a separate service (UDP), and covers options for LoadBalancer,
   shared static IP, and NodePort configurations (#67).
+
+### Changed
+
+- **netbird**: Bump appVersion from 0.68.1 to 0.68.2.
+  See [v0.68.2 release notes](https://github.com/netbirdio/netbird/releases/tag/v0.68.2) (#69).
 
 ## [0.4.0] — 2026-04-09
 
