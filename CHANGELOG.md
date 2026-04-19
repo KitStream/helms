@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Added
+
+- **netbird**: Add `server.stunService.nodePort` value to allow specifying a
+  fixed NodePort number when `server.stunService.type` is `NodePort`.
+
 ## [0.4.2] — 2026-04-21
 
 ### Added

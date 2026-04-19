@@ -278,6 +278,16 @@ server:
     port: 3478
 ```
 
+To pin a specific NodePort instead of letting Kubernetes assign one automatically:
+
+```yaml
+server:
+  stunService:
+    type: NodePort
+    port: 3478
+    nodePort: 30478
+```
+
 Point DNS at one or more node IPs. Clients will connect on the allocated
 NodePort (check `kubectl get svc` for the assigned port).
 
@@ -646,6 +656,7 @@ ADFS) can be tested manually:
 | `server.service.port`            | int    | `80`             | Server service port      |
 | `server.stunService.type`        | string | `"LoadBalancer"` | STUN service type        |
 | `server.stunService.port`        | int    | `3478`           | STUN service port        |
+| `server.stunService.nodePort`    | int    | `null`           | Fixed NodePort number    |
 | `server.stunService.annotations` | object | `{}`             | STUN service annotations |
 
 #### Server Ingress

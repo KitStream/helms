@@ -43,6 +43,35 @@ tests:
           path: spec.type
           value: NodePort
 
+  - it: should set nodePort when type is NodePort and nodePort is specified
+    set:
+      server.stunService.type: NodePort
+      server.stunService.nodePort: 30478
+    asserts:
+      - contains:
+          path: spec.ports
+          content:
+            name: stun
+            port: 3478
+            targetPort: stun
+            protocol: UDP
+            nodePort: 30478
+
+  - it: should not set nodePort for LoadBalancer type even if nodePort is specified
+    set:
+      server.stunService.type: LoadBalancer
+      server.stunService.nodePort: 30478
+    asserts:
+      - isNull:
+          path: spec.ports[0].nodePort
+
+  - it: should not set nodePort for NodePort type when nodePort is not specified
+    set:
+      server.stunService.type: NodePort
+    asserts:
+      - isNull:
+          path: spec.ports[0].nodePort
+
   - it: should include selector labels
     asserts:
       - isSubset:
