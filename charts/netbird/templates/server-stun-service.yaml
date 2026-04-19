@@ -16,6 +16,9 @@ spec:
       port: {{ .Values.server.stunService.port }}
       targetPort: stun
       protocol: UDP
+      {{- if and (eq .Values.server.stunService.type "NodePort") (not (kindIs "invalid" .Values.server.stunService.nodePort)) }}
+      nodePort: {{ .Values.server.stunService.nodePort }}
+      {{- end }}
   selector:
     {{- include "netbird.server.selectorLabels" . | nindent 4 }}
 

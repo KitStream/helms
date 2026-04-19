@@ -421,6 +421,9 @@ server:
   stunService:
     type: LoadBalancer
     port: 3478
+    # -- Optional nodePort for NodePort service type (valid range: 30000–32767).
+    # Omit or set to null to let Kubernetes allocate automatically.
+    nodePort: null
     annotations: {}
 
   # -- Ingress for HTTP routes (API + OAuth2).
