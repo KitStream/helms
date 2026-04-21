@@ -441,14 +441,14 @@ server:
   httpRoute:
     enabled: false
     parentRefs: []
-      # - name: my-gateway
-      #   namespace: gateway-system
-      #   sectionName: https
+    # - name: my-gateway
+    #   namespace: gateway-system
+    #   sectionName: https
     hostnames: []
     rules: []
-      # - matches:
-      #     - path: { type: PathPrefix, value: /api }
-      #     - path: { type: PathPrefix, value: /oauth2 }
+    # - matches:
+    #     - path: { type: PathPrefix, value: /api }
+    #     - path: { type: PathPrefix, value: /oauth2 }
     annotations: {}
     labels: {}
 
@@ -479,9 +479,9 @@ server:
     parentRefs: []
     hostnames: []
     rules: []
-      # - matches:
-      #     - method: { service: signalexchange.SignalExchange }
-      #     - method: { service: management.ManagementService }
+    # - matches:
+    #     - method: { service: signalexchange.SignalExchange }
+    #     - method: { service: management.ManagementService }
     annotations: {}
     labels: {}
 
@@ -503,9 +503,9 @@ server:
     parentRefs: []
     hostnames: []
     rules: []
-      # - matches:
-      #     - path: { type: PathPrefix, value: /relay }
-      #     - path: { type: PathPrefix, value: /ws-proxy }
+    # - matches:
+    #     - path: { type: PathPrefix, value: /relay }
+    #     - path: { type: PathPrefix, value: /ws-proxy }
     annotations: {}
     labels: {}
 
@@ -517,9 +517,9 @@ server:
     enabled: false
     parentRefs: []
     rules: []
-      # - backendRefs:
-      #     - name: <auto>
-      #       port: 80
+    # - backendRefs:
+    #     - name: <auto>
+    #       port: 80
     annotations: {}
     labels: {}
 
@@ -603,8 +603,8 @@ dashboard:
     parentRefs: []
     hostnames: []
     rules: []
-      # - matches:
-      #     - path: { type: PathPrefix, value: / }
+    # - matches:
+    #     - path: { type: PathPrefix, value: / }
     annotations: {}
     labels: {}
 

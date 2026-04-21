@@ -741,23 +741,23 @@ ADFS) can be tested manually:
 
 #### Server Ingress
 
-| Key                               | Type   | Default         | Description                                            |
-| --------------------------------- | ------ | --------------- | ------------------------------------------------------ |
-| `server.ingress.enabled`          | bool   | `false`         | Create HTTP ingress (API + OAuth2). Mutually exclusive with `server.httpRoute`. |
-| `server.ingress.className`        | string | `"nginx"`       | Ingress class                                          |
-| `server.ingress.annotations`      | object | `{}`            | Ingress annotations                                    |
-| `server.ingress.hosts`            | list   | `[]`            | Ingress host rules                                     |
-| `server.ingress.tls`              | list   | `[]`            | TLS configuration                                      |
-| `server.ingressGrpc.enabled`      | bool   | `false`         | Create gRPC ingress (Signal + Management). Mutually exclusive with `server.grpcRoute`. |
-| `server.ingressGrpc.className`    | string | `"nginx"`       | Ingress class                                          |
-| `server.ingressGrpc.annotations`  | object | see values.yaml | GRPC backend annotations                               |
-| `server.ingressGrpc.hosts`        | list   | `[]`            | Ingress host rules                                     |
-| `server.ingressGrpc.tls`          | list   | `[]`            | TLS configuration                                      |
+| Key                               | Type   | Default         | Description                                                                                                 |
+| --------------------------------- | ------ | --------------- | ----------------------------------------------------------------------------------------------------------- |
+| `server.ingress.enabled`          | bool   | `false`         | Create HTTP ingress (API + OAuth2). Mutually exclusive with `server.httpRoute`.                             |
+| `server.ingress.className`        | string | `"nginx"`       | Ingress class                                                                                               |
+| `server.ingress.annotations`      | object | `{}`            | Ingress annotations                                                                                         |
+| `server.ingress.hosts`            | list   | `[]`            | Ingress host rules                                                                                          |
+| `server.ingress.tls`              | list   | `[]`            | TLS configuration                                                                                           |
+| `server.ingressGrpc.enabled`      | bool   | `false`         | Create gRPC ingress (Signal + Management). Mutually exclusive with `server.grpcRoute`.                      |
+| `server.ingressGrpc.className`    | string | `"nginx"`       | Ingress class                                                                                               |
+| `server.ingressGrpc.annotations`  | object | see values.yaml | GRPC backend annotations                                                                                    |
+| `server.ingressGrpc.hosts`        | list   | `[]`            | Ingress host rules                                                                                          |
+| `server.ingressGrpc.tls`          | list   | `[]`            | TLS configuration                                                                                           |
 | `server.ingressRelay.enabled`     | bool   | `false`         | Create relay/WebSocket ingress. Mutually exclusive with `server.relayHttpRoute` and `server.relayTcpRoute`. |
-| `server.ingressRelay.className`   | string | `"nginx"`       | Ingress class                                          |
-| `server.ingressRelay.annotations` | object | `{}`            | Ingress annotations                                    |
-| `server.ingressRelay.hosts`       | list   | `[]`            | Ingress host rules                                     |
-| `server.ingressRelay.tls`         | list   | `[]`            | TLS configuration                                      |
+| `server.ingressRelay.className`   | string | `"nginx"`       | Ingress class                                                                                               |
+| `server.ingressRelay.annotations` | object | `{}`            | Ingress annotations                                                                                         |
+| `server.ingressRelay.hosts`       | list   | `[]`            | Ingress host rules                                                                                          |
+| `server.ingressRelay.tls`         | list   | `[]`            | TLS configuration                                                                                           |
 
 #### Server Gateway API routes
 
@@ -765,31 +765,31 @@ Gateway API alternatives to the Ingress blocks above. Enabling both an
 Ingress and its matching route block is a template-time error. TLS is
 terminated at the referenced Gateway's listeners, not in these values.
 
-| Key                                  | Type   | Default | Description                                                           |
-| ------------------------------------ | ------ | ------- | --------------------------------------------------------------------- |
-| `server.httpRoute.enabled`           | bool   | `false` | Create `HTTPRoute` for HTTP (API + OAuth2). Requires `parentRefs`.    |
-| `server.httpRoute.parentRefs`        | list   | `[]`    | Gateways to attach to (`name`, `namespace`, optional `sectionName`).  |
-| `server.httpRoute.hostnames`         | list   | `[]`    | HTTPRoute hostnames                                                   |
-| `server.httpRoute.rules`             | list   | `[]`    | `HTTPRoute.spec.rules`. Omitted `backendRefs` default to server Service on port 80. |
-| `server.httpRoute.annotations`       | object | `{}`    | Route annotations                                                     |
-| `server.httpRoute.labels`            | object | `{}`    | Extra labels                                                          |
-| `server.grpcRoute.enabled`           | bool   | `false` | Create `GRPCRoute` for Signal + Management. Works with plaintext h2c. |
-| `server.grpcRoute.parentRefs`        | list   | `[]`    | Gateway parent refs                                                   |
-| `server.grpcRoute.hostnames`         | list   | `[]`    | GRPCRoute hostnames                                                   |
-| `server.grpcRoute.rules`             | list   | `[]`    | `GRPCRoute.spec.rules` (method or header matches)                     |
-| `server.grpcRoute.annotations`       | object | `{}`    | Route annotations                                                     |
-| `server.grpcRoute.labels`            | object | `{}`    | Extra labels                                                          |
-| `server.relayHttpRoute.enabled`      | bool   | `false` | Create `HTTPRoute` for relay + WebSocket (default Gateway API path).  |
-| `server.relayHttpRoute.parentRefs`   | list   | `[]`    | Gateway parent refs                                                   |
-| `server.relayHttpRoute.hostnames`    | list   | `[]`    | HTTPRoute hostnames                                                   |
-| `server.relayHttpRoute.rules`        | list   | `[]`    | `HTTPRoute.spec.rules`                                                |
-| `server.relayHttpRoute.annotations`  | object | `{}`    | Route annotations                                                     |
-| `server.relayHttpRoute.labels`       | object | `{}`    | Extra labels                                                          |
-| `server.relayTcpRoute.enabled`       | bool   | `false` | Create `TCPRoute` (`v1alpha2`) for raw-TCP relay listeners.           |
-| `server.relayTcpRoute.parentRefs`    | list   | `[]`    | Gateway parent refs                                                   |
-| `server.relayTcpRoute.rules`         | list   | `[]`    | `TCPRoute.spec.rules`. Defaults to a single rule targeting server Service on port 80. |
-| `server.relayTcpRoute.annotations`   | object | `{}`    | Route annotations                                                     |
-| `server.relayTcpRoute.labels`        | object | `{}`    | Extra labels                                                          |
+| Key                                 | Type   | Default | Description                                                                           |
+| ----------------------------------- | ------ | ------- | ------------------------------------------------------------------------------------- |
+| `server.httpRoute.enabled`          | bool   | `false` | Create `HTTPRoute` for HTTP (API + OAuth2). Requires `parentRefs`.                    |
+| `server.httpRoute.parentRefs`       | list   | `[]`    | Gateways to attach to (`name`, `namespace`, optional `sectionName`).                  |
+| `server.httpRoute.hostnames`        | list   | `[]`    | HTTPRoute hostnames                                                                   |
+| `server.httpRoute.rules`            | list   | `[]`    | `HTTPRoute.spec.rules`. Omitted `backendRefs` default to server Service on port 80.   |
+| `server.httpRoute.annotations`      | object | `{}`    | Route annotations                                                                     |
+| `server.httpRoute.labels`           | object | `{}`    | Extra labels                                                                          |
+| `server.grpcRoute.enabled`          | bool   | `false` | Create `GRPCRoute` for Signal + Management. Works with plaintext h2c.                 |
+| `server.grpcRoute.parentRefs`       | list   | `[]`    | Gateway parent refs                                                                   |
+| `server.grpcRoute.hostnames`        | list   | `[]`    | GRPCRoute hostnames                                                                   |
+| `server.grpcRoute.rules`            | list   | `[]`    | `GRPCRoute.spec.rules` (method or header matches)                                     |
+| `server.grpcRoute.annotations`      | object | `{}`    | Route annotations                                                                     |
+| `server.grpcRoute.labels`           | object | `{}`    | Extra labels                                                                          |
+| `server.relayHttpRoute.enabled`     | bool   | `false` | Create `HTTPRoute` for relay + WebSocket (default Gateway API path).                  |
+| `server.relayHttpRoute.parentRefs`  | list   | `[]`    | Gateway parent refs                                                                   |
+| `server.relayHttpRoute.hostnames`   | list   | `[]`    | HTTPRoute hostnames                                                                   |
+| `server.relayHttpRoute.rules`       | list   | `[]`    | `HTTPRoute.spec.rules`                                                                |
+| `server.relayHttpRoute.annotations` | object | `{}`    | Route annotations                                                                     |
+| `server.relayHttpRoute.labels`      | object | `{}`    | Extra labels                                                                          |
+| `server.relayTcpRoute.enabled`      | bool   | `false` | Create `TCPRoute` (`v1alpha2`) for raw-TCP relay listeners.                           |
+| `server.relayTcpRoute.parentRefs`   | list   | `[]`    | Gateway parent refs                                                                   |
+| `server.relayTcpRoute.rules`        | list   | `[]`    | `TCPRoute.spec.rules`. Defaults to a single rule targeting server Service on port 80. |
+| `server.relayTcpRoute.annotations`  | object | `{}`    | Route annotations                                                                     |
+| `server.relayTcpRoute.labels`       | object | `{}`    | Extra labels                                                                          |
 
 #### Server Pod
 
@@ -848,21 +848,21 @@ terminated at the referenced Gateway's listeners, not in these values.
 
 #### Dashboard Networking
 
-| Key                               | Type   | Default       | Description                                                          |
-| --------------------------------- | ------ | ------------- | -------------------------------------------------------------------- |
-| `dashboard.service.type`          | string | `"ClusterIP"` | Dashboard service type                                               |
-| `dashboard.service.port`          | int    | `80`          | Dashboard service port                                               |
-| `dashboard.ingress.enabled`       | bool   | `false`       | Create dashboard ingress. Mutually exclusive with `dashboard.httpRoute`. |
-| `dashboard.ingress.className`     | string | `"nginx"`     | Ingress class                                                        |
-| `dashboard.ingress.annotations`   | object | `{}`          | Ingress annotations                                                  |
-| `dashboard.ingress.hosts`         | list   | `[]`          | Ingress host rules                                                   |
-| `dashboard.ingress.tls`           | list   | `[]`          | TLS configuration                                                    |
-| `dashboard.httpRoute.enabled`     | bool   | `false`       | Create Gateway API `HTTPRoute` for the dashboard. Requires `parentRefs`. |
-| `dashboard.httpRoute.parentRefs`  | list   | `[]`          | Gateways to attach to                                                |
-| `dashboard.httpRoute.hostnames`   | list   | `[]`          | HTTPRoute hostnames                                                  |
+| Key                               | Type   | Default       | Description                                                                            |
+| --------------------------------- | ------ | ------------- | -------------------------------------------------------------------------------------- |
+| `dashboard.service.type`          | string | `"ClusterIP"` | Dashboard service type                                                                 |
+| `dashboard.service.port`          | int    | `80`          | Dashboard service port                                                                 |
+| `dashboard.ingress.enabled`       | bool   | `false`       | Create dashboard ingress. Mutually exclusive with `dashboard.httpRoute`.               |
+| `dashboard.ingress.className`     | string | `"nginx"`     | Ingress class                                                                          |
+| `dashboard.ingress.annotations`   | object | `{}`          | Ingress annotations                                                                    |
+| `dashboard.ingress.hosts`         | list   | `[]`          | Ingress host rules                                                                     |
+| `dashboard.ingress.tls`           | list   | `[]`          | TLS configuration                                                                      |
+| `dashboard.httpRoute.enabled`     | bool   | `false`       | Create Gateway API `HTTPRoute` for the dashboard. Requires `parentRefs`.               |
+| `dashboard.httpRoute.parentRefs`  | list   | `[]`          | Gateways to attach to                                                                  |
+| `dashboard.httpRoute.hostnames`   | list   | `[]`          | HTTPRoute hostnames                                                                    |
 | `dashboard.httpRoute.rules`       | list   | `[]`          | `HTTPRoute.spec.rules`. Omitted `backendRefs` default to dashboard Service on port 80. |
-| `dashboard.httpRoute.annotations` | object | `{}`          | Route annotations                                                    |
-| `dashboard.httpRoute.labels`      | object | `{}`          | Extra labels                                                         |
+| `dashboard.httpRoute.annotations` | object | `{}`          | Route annotations                                                                      |
+| `dashboard.httpRoute.labels`      | object | `{}`          | Extra labels                                                                           |
 
 #### Dashboard Pod
 
