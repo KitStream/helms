@@ -601,20 +601,20 @@ ADFS) can be tested manually:
 
 #### Server Configuration
 
-| Key                                        | Type   | Default                       | Description                              |
-| ------------------------------------------ | ------ | ----------------------------- | ---------------------------------------- |
-| `server.config.listenAddress`              | string | `":80"`                       | Address and port the server listens on   |
+| Key                                        | Type   | Default                       | Description                                                                           |
+| ------------------------------------------ | ------ | ----------------------------- | ------------------------------------------------------------------------------------- |
+| `server.config.listenAddress`              | string | `":80"`                       | Address and port the server listens on                                                |
 | `server.config.exposedAddress`             | string | `""`                          | Public URL for peer connections — `https://host:port` (port required, see note below) |
-| `server.config.stunPorts`                  | list   | `[3478]`                      | UDP ports for the embedded STUN server   |
-| `server.config.metricsPort`                | int    | `9090`                        | Prometheus metrics port                  |
-| `server.config.healthcheckAddress`         | string | `":9000"`                     | Health check endpoint address            |
-| `server.config.logLevel`                   | string | `"info"`                      | Log verbosity (debug, info, warn, error) |
-| `server.config.logFile`                    | string | `"console"`                   | Log output destination                   |
-| `server.config.dataDir`                    | string | `"/var/lib/netbird"`          | Data directory for state and DB          |
-| `server.config.auth.issuer`                | string | `""`                          | OAuth2/OIDC issuer URL                   |
-| `server.config.auth.signKeyRefreshEnabled` | bool   | `true`                        | Auto-refresh IdP signing keys            |
-| `server.config.auth.dashboardRedirectURIs` | list   | `[]`                          | Dashboard OAuth2 redirect URIs           |
-| `server.config.auth.cliRedirectURIs`       | list   | `["http://localhost:53000/"]` | CLI redirect URIs                        |
+| `server.config.stunPorts`                  | list   | `[3478]`                      | UDP ports for the embedded STUN server                                                |
+| `server.config.metricsPort`                | int    | `9090`                        | Prometheus metrics port                                                               |
+| `server.config.healthcheckAddress`         | string | `":9000"`                     | Health check endpoint address                                                         |
+| `server.config.logLevel`                   | string | `"info"`                      | Log verbosity (debug, info, warn, error)                                              |
+| `server.config.logFile`                    | string | `"console"`                   | Log output destination                                                                |
+| `server.config.dataDir`                    | string | `"/var/lib/netbird"`          | Data directory for state and DB                                                       |
+| `server.config.auth.issuer`                | string | `""`                          | OAuth2/OIDC issuer URL                                                                |
+| `server.config.auth.signKeyRefreshEnabled` | bool   | `true`                        | Auto-refresh IdP signing keys                                                         |
+| `server.config.auth.dashboardRedirectURIs` | list   | `[]`                          | Dashboard OAuth2 redirect URIs                                                        |
+| `server.config.auth.cliRedirectURIs`       | list   | `["http://localhost:53000/"]` | CLI redirect URIs                                                                     |
 
 #### Server Secrets
 
