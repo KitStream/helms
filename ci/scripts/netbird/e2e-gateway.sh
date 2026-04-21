@@ -18,8 +18,10 @@ CHART="charts/netbird"
 VALUES_FILE="$CHART/ci/e2e-values-gateway.yaml"
 TIMEOUT="10m"
 
-# Pinned versions so CI is reproducible.
-GATEWAY_API_VERSION="v1.2.1"
+# Pinned versions so CI is reproducible. Envoy Gateway bundles the Gateway
+# API CRDs (standard + experimental channels, including TCPRoute), so we
+# don't install them separately — doing both causes field-manager conflicts
+# during EG's server-side apply.
 ENVOY_GATEWAY_VERSION="v1.5.3"
 ENVOY_NS="envoy-gateway-system"
 
@@ -35,15 +37,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# ── Install Gateway API CRDs ──────────────────────────────────────────
-log "Installing Gateway API CRDs ($GATEWAY_API_VERSION)..."
-kubectl apply -f \
-  "https://github.com/kubernetes-sigs/gateway-api/releases/download/$GATEWAY_API_VERSION/standard-install.yaml"
-# TCPRoute lives in the experimental channel (still v1alpha2).
-kubectl apply -f \
-  "https://github.com/kubernetes-sigs/gateway-api/releases/download/$GATEWAY_API_VERSION/experimental-install.yaml"
-
-# ── Install Envoy Gateway ─────────────────────────────────────────────
+# ── Install Envoy Gateway (also installs Gateway API CRDs) ────────────
 log "Installing Envoy Gateway ($ENVOY_GATEWAY_VERSION)..."
 helm upgrade --install eg oci://docker.io/envoyproxy/gateway-helm \
   --version "$ENVOY_GATEWAY_VERSION" \
