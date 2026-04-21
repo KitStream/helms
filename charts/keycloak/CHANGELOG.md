@@ -8,9 +8,10 @@ All notable changes to the Keycloak Helm chart will be documented in this file.
 
 - Fix broken chart icon URL — upstream Keycloak moved `keycloak_icon_512px.svg` to `icon.svg` (#64)
 
-### Changed
+### Security
 
-- Bump Keycloak appVersion from 26.5.7 to 26.6.0 (feature release)
-  - JWT Authorization Grant, Federated client authentication, Workflows now fully supported
-  - Zero-downtime patch releases
-  - See [upstream release notes](https://github.com/keycloak/keycloak/releases/tag/26.6.0) for details
+- Bump Keycloak appVersion from 26.6.0 to 26.6.1 (security and bugfix release)
+  - CVE-2026-4366: Blind Server-Side Request Forgery (SSRF) via HTTP redirect handling
+  - CVE-2026-4633: User enumeration via identity-first login
+  - Includes additional bugfixes (see upstream release notes)
+  - See [upstream release notes](https://github.com/keycloak/keycloak/releases/tag/26.6.1) for details
