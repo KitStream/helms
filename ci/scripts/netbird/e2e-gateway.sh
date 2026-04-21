@@ -29,6 +29,11 @@ log()  { echo "==> $*"; }
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
 cleanup() {
+  local rc=$?
+  if [ $rc -ne 0 ]; then
+    log "Exit $rc — skipping cleanup so CI can collect debug info."
+    return
+  fi
   log "Cleaning up..."
   helm uninstall "$RELEASE" -n "$NAMESPACE" --ignore-not-found 2>/dev/null || true
   kubectl delete namespace "$NAMESPACE" --ignore-not-found 2>/dev/null || true
@@ -76,8 +81,12 @@ spec:
           from: Same
 EOF
 
-log "Waiting for Gateway to be Programmed..."
-kubectl -n "$NAMESPACE" wait --for=condition=Programmed gateway/netbird-gateway --timeout=3m
+# Wait for Accepted (admission by the controller) rather than Programmed
+# (data-plane pod ready). Route attachment only requires Accepted, and
+# waiting on Programmed means waiting for Envoy proxy image pull + pod
+# readiness, which is slow on resource-constrained kind nodes.
+log "Waiting for Gateway to be Accepted..."
+kubectl -n "$NAMESPACE" wait --for=condition=Accepted gateway/netbird-gateway --timeout=2m
 
 # ── Generate PAT secret (chart requires pat.secret.secretName) ────────
 generate_pat_secret() {
