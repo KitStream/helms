@@ -30,7 +30,7 @@ database:
 
 server:
   config:
-    exposedAddress: "https://netbird.example.com"
+    exposedAddress: "https://netbird.example.com:443"
     auth:
       issuer: "https://auth.example.com"
       dashboardRedirectURIs:

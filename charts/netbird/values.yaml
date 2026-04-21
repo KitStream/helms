@@ -301,8 +301,13 @@ server:
     listenAddress: ":80"
 
     # -- The public-facing URL where peers connect to the server.
-    # Format: "https://hostname:port". Distributed to peers and must be
-    # reachable from all clients.
+    # Format: "https://hostname:port" — the port is REQUIRED, even when
+    # it matches the scheme default (443 for https, 80 for http).
+    # NetBird clients build their gRPC dial target from this URL using
+    # Go's net/url parser; without an explicit port the daemon fails
+    # with "missing port in address". The chart enforces this with a
+    # fail-fast template validation.
+    # Distributed to peers and must be reachable from all clients.
     exposedAddress: ""
 
     # -- List of UDP ports for the embedded STUN server.

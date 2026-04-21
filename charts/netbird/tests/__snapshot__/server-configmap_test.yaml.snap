@@ -176,7 +176,7 @@ should render exposed address from values:
     config.yaml.tpl: |
       server:
         listenAddress: ":80"
-        exposedAddress: "https://netbird.example.com"
+        exposedAddress: "https://netbird.example.com:443"
         stunPorts:
           - 3478
         metricsPort: 9090

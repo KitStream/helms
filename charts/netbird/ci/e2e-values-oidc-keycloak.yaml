@@ -17,7 +17,7 @@ server:
     type: ClusterIP
 
   config:
-    exposedAddress: "https://netbird.localhost"
+    exposedAddress: "https://netbird.localhost:443"
     auth:
       issuer: "http://keycloak.netbird-e2e.svc.cluster.local:8080/realms/netbird"
       dashboardRedirectURIs:

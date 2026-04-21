@@ -23,10 +23,45 @@ tests:
 
   - it: should render exposed address from values
     set:
-      server.config.exposedAddress: "https://netbird.example.com"
+      server.config.exposedAddress: "https://netbird.example.com:443"
     asserts:
       - matchSnapshot:
           path: data
+
+  - it: should fail when exposedAddress is missing a port
+    set:
+      server.config.exposedAddress: "https://netbird.example.com"
+    asserts:
+      - failedTemplate:
+          errorPattern: "must include an explicit port"
+
+  - it: should fail when exposedAddress is missing port (http scheme)
+    set:
+      server.config.exposedAddress: "http://netbird.example.com/path"
+    asserts:
+      - failedTemplate:
+          errorPattern: "must include an explicit port"
+
+  - it: should accept exposedAddress with explicit port and trailing slash
+    set:
+      server.config.exposedAddress: "https://netbird.example.com:443/"
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: should accept exposedAddress with bracketed IPv6 host and port
+    set:
+      server.config.exposedAddress: "https://[2001:db8::1]:443"
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: should accept empty exposedAddress (validation only fires when set)
+    set:
+      server.config.exposedAddress: ""
+    asserts:
+      - hasDocuments:
+          count: 1
 
   - it: should render auth issuer from values
     set:
