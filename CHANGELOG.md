@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+## [0.4.2] — 2026-04-21
+
 ### Added
 
 - **netbird**: Fail-fast Helm template validation that rejects
@@ -17,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **netbird**: Bump appVersion from 0.68.2 to 0.68.3.
+  See [v0.68.3 release notes](https://github.com/netbirdio/netbird/releases/tag/v0.68.3) (#71).
 - **netbird**: README and `values.yaml` examples now show
   `exposedAddress` with an explicit `:443` port and document that the
   port is required even when it matches the scheme default.
