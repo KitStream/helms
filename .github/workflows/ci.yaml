@@ -210,6 +210,44 @@ jobs:
           echo "=== Events ==="
           kubectl -n netbird-e2e get events --sort-by='.lastTimestamp' || true
 
+  e2e-gateway:
+    name: "E2E — NetBird: Gateway API (Envoy Gateway)"
+    runs-on: ubuntu-latest
+    needs: [detect-changes, lint-and-unit-test]
+    if: needs.detect-changes.outputs.netbird == 'true' || needs.detect-changes.outputs.ci == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v4.0.2
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: helms-e2e
+
+      - name: Run e2e test (gateway)
+        run: ci/scripts/netbird/e2e-gateway.sh
+
+      - name: Show debug info on failure
+        if: failure()
+        run: |
+          echo "=== Pod status ==="
+          kubectl -n netbird-gateway-e2e get pods -o wide || true
+          echo "=== Gateway status ==="
+          kubectl -n netbird-gateway-e2e get gateway netbird-gateway -o yaml || true
+          echo "=== Route statuses ==="
+          kubectl -n netbird-gateway-e2e get httproute,grpcroute -o yaml || true
+          echo "=== Envoy Gateway logs ==="
+          kubectl -n envoy-gateway-system logs deployment/envoy-gateway --tail=100 || true
+          echo "=== Server logs ==="
+          kubectl -n netbird-gateway-e2e logs deployment/netbird-gateway-e2e-server --all-containers --tail=100 || true
+          echo "=== Events ==="
+          kubectl -n netbird-gateway-e2e get events --sort-by='.lastTimestamp' || true
+
   e2e-oidc-embedded:
     name: "E2E — NetBird: OIDC (Embedded IdP)"
     runs-on: ubuntu-latest

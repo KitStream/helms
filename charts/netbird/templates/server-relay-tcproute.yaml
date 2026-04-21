@@ -1,0 +1,33 @@
+{{- if .Values.server.relayTcpRoute.enabled }}
+{{- $serviceName := include "netbird.server.fullname" . }}
+{{- $rules := list }}
+{{- range .Values.server.relayTcpRoute.rules }}
+  {{- $rule := deepCopy . }}
+  {{- if not (hasKey $rule "backendRefs") }}
+    {{- $_ := set $rule "backendRefs" (list (dict "name" $serviceName "port" 80)) }}
+  {{- end }}
+  {{- $rules = append $rules $rule }}
+{{- end }}
+{{- if not $rules }}
+  {{- $rules = list (dict "backendRefs" (list (dict "name" $serviceName "port" 80))) }}
+{{- end }}
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: {{ $serviceName }}-relay-tcp
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "netbird.server.labels" . | nindent 4 }}
+    {{- with .Values.server.relayTcpRoute.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.server.relayTcpRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+    {{- toYaml .Values.server.relayTcpRoute.parentRefs | nindent 4 }}
+  rules:
+    {{- toYaml $rules | nindent 4 }}
+{{- end }}

@@ -1,0 +1,92 @@
+# E2E values for exercising Gateway API support on a kind cluster with
+# Envoy Gateway. Mirrors the sqlite-backend minimal config but swaps the
+# four Ingress blocks for their Gateway API counterparts.
+
+database:
+  type: sqlite
+
+server:
+  persistentVolume:
+    enabled: false
+
+  stunService:
+    type: ClusterIP
+
+  config:
+    exposedAddress: "http://netbird-gateway-e2e-server.netbird-gateway-e2e.svc.cluster.local:80"
+    auth:
+      issuer: "https://auth.localhost"
+      dashboardRedirectURIs:
+        - "https://netbird.localhost/nb-auth"
+        - "https://netbird.localhost/nb-silent-auth"
+
+  livenessProbe:
+    failureThreshold: 10
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    tcpSocket:
+      port: http
+  readinessProbe:
+    failureThreshold: 10
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    tcpSocket:
+      port: http
+
+  httpRoute:
+    enabled: true
+    parentRefs:
+      - name: netbird-gateway
+        sectionName: http
+    hostnames:
+      - netbird.localhost
+    rules:
+      - matches:
+          - path: { type: PathPrefix, value: /api }
+          - path: { type: PathPrefix, value: /oauth2 }
+
+  grpcRoute:
+    enabled: true
+    parentRefs:
+      - name: netbird-gateway
+        sectionName: http
+    hostnames:
+      - netbird.localhost
+    rules:
+      - matches:
+          - method: { service: signalexchange.SignalExchange }
+      - matches:
+          - method: { service: management.ManagementService }
+
+  relayHttpRoute:
+    enabled: true
+    parentRefs:
+      - name: netbird-gateway
+        sectionName: http
+    hostnames:
+      - netbird.localhost
+    rules:
+      - matches:
+          - path: { type: PathPrefix, value: /relay }
+          - path: { type: PathPrefix, value: /ws-proxy }
+
+dashboard:
+  config:
+    mgmtApiEndpoint: "https://netbird.localhost"
+    mgmtGrpcApiEndpoint: "https://netbird.localhost"
+    authAuthority: "https://auth.localhost"
+    authClientId: "test-client"
+    authAudience: "test-audience"
+
+  httpRoute:
+    enabled: true
+    parentRefs:
+      - name: netbird-gateway
+        sectionName: http
+    hostnames:
+      - netbird.localhost
+    rules:
+      - matches:
+          - path: { type: PathPrefix, value: / }

@@ -1,0 +1,50 @@
+suite: dashboard HTTPRoute tests
+templates:
+  - templates/dashboard-httproute.yaml
+tests:
+  - it: should not render when disabled
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render HTTPRoute when enabled
+    set:
+      dashboard.httpRoute.enabled: true
+      dashboard.httpRoute.parentRefs:
+        - name: gw
+      dashboard.httpRoute.rules:
+        - matches:
+            - path: { type: PathPrefix, value: / }
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: HTTPRoute
+      - isAPIVersion:
+          of: gateway.networking.k8s.io/v1
+
+  - it: should carry dashboard component label
+    set:
+      dashboard.httpRoute.enabled: true
+      dashboard.httpRoute.parentRefs:
+        - name: gw
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: dashboard
+
+  - it: should auto-fill backendRefs to dashboard service when omitted
+    set:
+      dashboard.httpRoute.enabled: true
+      dashboard.httpRoute.parentRefs:
+        - name: gw
+      dashboard.httpRoute.rules:
+        - matches:
+            - path: { type: PathPrefix, value: / }
+    asserts:
+      - equal:
+          path: spec.rules[0].backendRefs[0].name
+          value: RELEASE-NAME-netbird-dashboard
+      - equal:
+          path: spec.rules[0].backendRefs[0].port
+          value: 80

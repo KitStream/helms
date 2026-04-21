@@ -14,12 +14,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `https://netbird.example.com`). NetBird clients require the port — without
   it the daemon fails with `missing port in address`. Use
   `https://netbird.example.com:443` instead. Fixes #75.
+- **netbird**: Gateway API support as a mutually-exclusive alternative to
+  Kubernetes Ingress for every traffic class. New values:
+  `server.httpRoute` (`HTTPRoute`), `server.grpcRoute` (`GRPCRoute`),
+  `server.relayHttpRoute` (`HTTPRoute`), `server.relayTcpRoute`
+  (`TCPRoute`, v1alpha2), and `dashboard.httpRoute` (`HTTPRoute`). The
+  chart renders routes only; users provide `parentRefs` to a Gateway they
+  already manage. Omitted `backendRefs` auto-fill to the netbird
+  server / dashboard Service on port 80. Fixes #74 — controllers that
+  support plaintext h2c (Envoy Gateway, Traefik Gateway, …) can now expose
+  gRPC without TLS via `GRPCRoute`, sidestepping the nginx-ingress h2c
+  limitation that made `server.ingressGrpc` fail silently without a cert.
+- **netbird**: Fail-fast validation that rejects enabling both an Ingress
+  and its Gateway-API counterpart for the same traffic class (and between
+  `server.relayHttpRoute` / `server.relayTcpRoute`), or enabling a route
+  with an empty `parentRefs` list.
+- **netbird**: Fail-fast validation that rejects
+  `server.ingressGrpc.enabled=true` with an empty `server.ingressGrpc.tls`
+  list. gRPC over Kubernetes Ingress requires TLS (nginx-ingress cannot
+  negotiate plaintext h2c, and the default `ssl-redirect: "true"`
+  annotation redirects plaintext gRPC to HTTPS) — previously this
+  misconfiguration failed silently. Fixes #74. Users who want plaintext
+  gRPC should use `server.grpcRoute` with a Gateway API controller that
+  supports h2c.
 
 ### Changed
 
 - **netbird**: README and `values.yaml` examples now show
   `exposedAddress` with an explicit `:443` port and document that the
   port is required even when it matches the scheme default.
+- **netbird**: README gains a "Gateway API as an alternative to Ingress"
+  section with copy-pasteable examples, parameter tables for the new
+  route blocks, and an updated architecture diagram.
 
 ## [0.4.1] — 2026-04-14
 

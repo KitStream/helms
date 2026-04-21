@@ -424,6 +424,7 @@ server:
     annotations: {}
 
   # -- Ingress for HTTP routes (API + OAuth2).
+  # Mutually exclusive with server.httpRoute.
   ingress:
     enabled: false
     className: "nginx"
@@ -431,7 +432,32 @@ server:
     hosts: []
     tls: []
 
+  # -- Gateway API HTTPRoute for HTTP routes (API + OAuth2).
+  # Mutually exclusive with server.ingress. TLS is terminated at the Gateway
+  # listener, so no tls block here. parentRefs and hostnames are required
+  # when enabled. rules pass through verbatim to HTTPRoute.spec.rules;
+  # backendRefs are auto-filled from the netbird server Service when a rule
+  # omits them.
+  httpRoute:
+    enabled: false
+    parentRefs: []
+      # - name: my-gateway
+      #   namespace: gateway-system
+      #   sectionName: https
+    hostnames: []
+    rules: []
+      # - matches:
+      #     - path: { type: PathPrefix, value: /api }
+      #     - path: { type: PathPrefix, value: /oauth2 }
+    annotations: {}
+    labels: {}
+
   # -- Ingress for gRPC routes (signal + management gRPC).
+  # Mutually exclusive with server.grpcRoute. Requires TLS: standard
+  # nginx-ingress cannot negotiate HTTP/2 cleartext (h2c) and
+  # `ssl-redirect: "true"` (set by default in this block) will redirect
+  # plaintext gRPC to HTTPS. For plaintext h2c, use server.grpcRoute with a
+  # Gateway API controller that supports it (Envoy Gateway, Traefik, …).
   ingressGrpc:
     enabled: false
     className: "nginx"
@@ -443,13 +469,59 @@ server:
     hosts: []
     tls: []
 
+  # -- Gateway API GRPCRoute for gRPC routes (signal + management).
+  # Mutually exclusive with server.ingressGrpc. Gateway controllers forward
+  # gRPC over HTTP/2 — including plaintext h2c — so this works without TLS
+  # when the Gateway listener is HTTP. rules pass through to
+  # GRPCRoute.spec.rules; backendRefs are auto-filled when omitted.
+  grpcRoute:
+    enabled: false
+    parentRefs: []
+    hostnames: []
+    rules: []
+      # - matches:
+      #     - method: { service: signalexchange.SignalExchange }
+      #     - method: { service: management.ManagementService }
+    annotations: {}
+    labels: {}
+
   # -- Ingress for relay and WebSocket routes.
+  # Mutually exclusive with server.relayHttpRoute and server.relayTcpRoute.
   ingressRelay:
     enabled: false
     className: "nginx"
     annotations: {}
     hosts: []
     tls: []
+
+  # -- Gateway API HTTPRoute for relay + WebSocket.
+  # Default choice for Gateway API — WebSocket uses HTTP/1.1 Upgrade which
+  # HTTPRoute handles natively. Mutually exclusive with server.ingressRelay
+  # and server.relayTcpRoute.
+  relayHttpRoute:
+    enabled: false
+    parentRefs: []
+    hostnames: []
+    rules: []
+      # - matches:
+      #     - path: { type: PathPrefix, value: /relay }
+      #     - path: { type: PathPrefix, value: /ws-proxy }
+    annotations: {}
+    labels: {}
+
+  # -- Gateway API TCPRoute for relay exposed as raw TCP.
+  # Alternative to relayHttpRoute for deployments that front relay with a
+  # dedicated TCP listener (no HTTP path matching). TCPRoute is v1alpha2.
+  # Mutually exclusive with server.ingressRelay and server.relayHttpRoute.
+  relayTcpRoute:
+    enabled: false
+    parentRefs: []
+    rules: []
+      # - backendRefs:
+      #     - name: <auto>
+      #       port: 80
+    annotations: {}
+    labels: {}
 
   # -- CPU/memory resource requests and limits.
   resources: {}
@@ -513,12 +585,28 @@ dashboard:
     type: ClusterIP
     port: 80
 
+  # -- Ingress for the dashboard web UI.
+  # Mutually exclusive with dashboard.httpRoute.
   ingress:
     enabled: false
     className: "nginx"
     annotations: {}
     hosts: []
     tls: []
+
+  # -- Gateway API HTTPRoute for the dashboard web UI.
+  # Mutually exclusive with dashboard.ingress. TLS is terminated at the
+  # Gateway listener. rules pass through; backendRefs auto-filled when
+  # omitted.
+  httpRoute:
+    enabled: false
+    parentRefs: []
+    hostnames: []
+    rules: []
+      # - matches:
+      #     - path: { type: PathPrefix, value: / }
+    annotations: {}
+    labels: {}
 
   resources: {}
   nodeSelector: {}

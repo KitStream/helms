@@ -128,6 +128,40 @@ here to keep `helm template` usable for partial inspection).
 {{- end }}
 
 {{/*
+netbird.validate.routeExclusion — enforce mutual exclusion between the
+Kubernetes Ingress and the Gateway API route for each traffic class. Both
+resources would otherwise claim the same paths/hostnames and silently
+create duplicate or racing rules.
+*/}}
+{{- define "netbird.validate.routeExclusion" -}}
+{{- if and .Values.server.ingress.enabled .Values.server.httpRoute.enabled -}}
+  {{- fail "server.ingress.enabled and server.httpRoute.enabled are mutually exclusive — pick Kubernetes Ingress or Gateway API HTTPRoute for server HTTP traffic." -}}
+{{- end -}}
+{{- if and .Values.server.ingressGrpc.enabled .Values.server.grpcRoute.enabled -}}
+  {{- fail "server.ingressGrpc.enabled and server.grpcRoute.enabled are mutually exclusive — pick Kubernetes Ingress or Gateway API GRPCRoute for server gRPC traffic." -}}
+{{- end -}}
+{{- if and .Values.server.ingressRelay.enabled (or .Values.server.relayHttpRoute.enabled .Values.server.relayTcpRoute.enabled) -}}
+  {{- fail "server.ingressRelay.enabled conflicts with server.relayHttpRoute/relayTcpRoute — pick exactly one route type for relay/WebSocket traffic." -}}
+{{- end -}}
+{{- if and .Values.server.relayHttpRoute.enabled .Values.server.relayTcpRoute.enabled -}}
+  {{- fail "server.relayHttpRoute.enabled and server.relayTcpRoute.enabled are mutually exclusive — pick HTTPRoute or TCPRoute, not both." -}}
+{{- end -}}
+{{- if and .Values.dashboard.ingress.enabled .Values.dashboard.httpRoute.enabled -}}
+  {{- fail "dashboard.ingress.enabled and dashboard.httpRoute.enabled are mutually exclusive — pick Kubernetes Ingress or Gateway API HTTPRoute for the dashboard." -}}
+{{- end -}}
+{{- range $path := list "server.httpRoute" "server.grpcRoute" "server.relayHttpRoute" "server.relayTcpRoute" "dashboard.httpRoute" -}}
+  {{- $parts := splitList "." $path -}}
+  {{- $block := index $.Values (index $parts 0) (index $parts 1) -}}
+  {{- if and $block.enabled (not $block.parentRefs) -}}
+    {{- fail (printf "%s.enabled is true but %s.parentRefs is empty — Gateway API routes must reference at least one Gateway." $path $path) -}}
+  {{- end -}}
+{{- end -}}
+{{- if and .Values.server.ingressGrpc.enabled (not .Values.server.ingressGrpc.tls) -}}
+  {{- fail "server.ingressGrpc.enabled is true but server.ingressGrpc.tls is empty. gRPC over Kubernetes Ingress requires TLS: standard nginx-ingress cannot negotiate HTTP/2 cleartext (h2c) and the default `nginx.ingress.kubernetes.io/ssl-redirect: \"true\"` annotation redirects plaintext gRPC to HTTPS — without a cert, requests fail silently. Either configure server.ingressGrpc.tls, or disable server.ingressGrpc and expose gRPC via server.grpcRoute (Gateway API) with a controller that supports plaintext h2c." -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 netbird.server.generatedSecretName — name of the auto-generated Secret.
 */}}
 {{- define "netbird.server.generatedSecretName" -}}
