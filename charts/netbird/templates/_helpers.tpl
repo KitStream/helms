@@ -106,6 +106,28 @@ render subcommand (envsubst mode) won't interpret user values.
 {{- end }}
 
 {{/*
+netbird.validate.exposedAddress — fail-fast validation that
+server.config.exposedAddress includes an explicit port.
+
+NetBird clients build their gRPC dial target from this URL using Go's
+net/url parser, which surfaces "missing port in address" when no port is
+present (e.g. "https://netbird.example.com"). The port must be set
+explicitly even when it matches the scheme default (443/80), because
+NetBird does not infer it.
+
+Accepts hostnames, IPv4, and bracketed IPv6. Empty exposedAddress passes
+(other templates already document it as required, but we don't fail
+here to keep `helm template` usable for partial inspection).
+*/}}
+{{- define "netbird.validate.exposedAddress" -}}
+{{- with .Values.server.config.exposedAddress -}}
+  {{- if not (regexMatch `^https?://(\[[^\]]+\]|[^/:?#]+):[0-9]+([/?#].*)?$` .) -}}
+    {{- fail (printf "server.config.exposedAddress %q must include an explicit port (e.g. \"https://netbird.example.com:443\"). NetBird clients require the port; without it the daemon fails with \"missing port in address\"." .) -}}
+  {{- end -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 netbird.server.generatedSecretName — name of the auto-generated Secret.
 */}}
 {{- define "netbird.server.generatedSecretName" -}}

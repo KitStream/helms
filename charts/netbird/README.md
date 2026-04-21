@@ -51,6 +51,13 @@ helm install netbird ./charts/netbird \
 
 ## Minimal Configuration Example
 
+> **`exposedAddress` must include an explicit port** (e.g. `https://netbird.example.com:443`),
+> even when the port matches the scheme default. NetBird clients build their
+> gRPC dial target from this URL using Go's `net/url` parser; without an
+> explicit port the daemon fails to connect with `missing port in address`.
+> The chart enforces this at template time and refuses to install with a
+> port-less value.
+
 ### Embedded IdP (no external provider)
 
 NetBird includes a built-in identity provider, so an external OAuth2/OIDC
@@ -60,7 +67,7 @@ provider is **not required**. To use the embedded IdP, set the issuer to
 ```yaml
 server:
   config:
-    exposedAddress: "https://netbird.example.com"
+    exposedAddress: "https://netbird.example.com:443"
     auth:
       issuer: "https://netbird.example.com/oauth2"
       dashboardRedirectURIs:
@@ -82,7 +89,7 @@ endpoint — no Keycloak, Auth0, or other external IdP is needed.
 ```yaml
 server:
   config:
-    exposedAddress: "https://netbird.example.com"
+    exposedAddress: "https://netbird.example.com:443"
     auth:
       issuer: "https://auth.example.com"
       dashboardRedirectURIs:
@@ -105,7 +112,7 @@ database:
 
 server:
   config:
-    exposedAddress: "https://netbird.example.com"
+    exposedAddress: "https://netbird.example.com:443"
     auth:
       issuer: "https://auth.example.com"
       dashboardRedirectURIs:
@@ -128,7 +135,7 @@ database:
 
 server:
   config:
-    exposedAddress: "https://netbird.example.com"
+    exposedAddress: "https://netbird.example.com:443"
     auth:
       issuer: "https://auth.example.com"
       dashboardRedirectURIs:
@@ -597,7 +604,7 @@ ADFS) can be tested manually:
 | Key                                        | Type   | Default                       | Description                              |
 | ------------------------------------------ | ------ | ----------------------------- | ---------------------------------------- |
 | `server.config.listenAddress`              | string | `":80"`                       | Address and port the server listens on   |
-| `server.config.exposedAddress`             | string | `""`                          | Public URL for peer connections          |
+| `server.config.exposedAddress`             | string | `""`                          | Public URL for peer connections — `https://host:port` (port required, see note below) |
 | `server.config.stunPorts`                  | list   | `[3478]`                      | UDP ports for the embedded STUN server   |
 | `server.config.metricsPort`                | int    | `9090`                        | Prometheus metrics port                  |
 | `server.config.healthcheckAddress`         | string | `":9000"`                     | Health check endpoint address            |

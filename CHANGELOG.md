@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Added
+
+- **netbird**: Fail-fast Helm template validation that rejects
+  `server.config.exposedAddress` values without an explicit port (e.g.
+  `https://netbird.example.com`). NetBird clients require the port — without
+  it the daemon fails with `missing port in address`. Use
+  `https://netbird.example.com:443` instead. Fixes #75.
+
+### Changed
+
+- **netbird**: README and `values.yaml` examples now show
+  `exposedAddress` with an explicit `:443` port and document that the
+  port is required even when it matches the scheme default.
+
 ## [0.4.1] — 2026-04-14
 
 ### Added
