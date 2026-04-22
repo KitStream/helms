@@ -368,3 +368,90 @@ tests:
       - matchRegex:
           path: data["config.yaml.tpl"]
           pattern: 'authAudience: "my\$\{DOLLAR\}api"'
+
+  # ── Route mutual-exclusion validation ─────────────────────────────────
+
+  - it: should fail when server ingress and httpRoute are both enabled
+    set:
+      server.ingress.enabled: true
+      server.httpRoute.enabled: true
+      server.httpRoute.parentRefs:
+        - name: gw
+    asserts:
+      - failedTemplate:
+          errorPattern: "server.ingress.enabled and server.httpRoute.enabled are mutually exclusive"
+
+  - it: should fail when server ingressGrpc and grpcRoute are both enabled
+    set:
+      server.ingressGrpc.enabled: true
+      server.grpcRoute.enabled: true
+      server.grpcRoute.parentRefs:
+        - name: gw
+    asserts:
+      - failedTemplate:
+          errorPattern: "server.ingressGrpc.enabled and server.grpcRoute.enabled are mutually exclusive"
+
+  - it: should fail when server ingressRelay and relayHttpRoute are both enabled
+    set:
+      server.ingressRelay.enabled: true
+      server.relayHttpRoute.enabled: true
+      server.relayHttpRoute.parentRefs:
+        - name: gw
+    asserts:
+      - failedTemplate:
+          errorPattern: "conflicts with server.relayHttpRoute/relayTcpRoute"
+
+  - it: should fail when server relayHttpRoute and relayTcpRoute are both enabled
+    set:
+      server.relayHttpRoute.enabled: true
+      server.relayHttpRoute.parentRefs:
+        - name: gw
+      server.relayTcpRoute.enabled: true
+      server.relayTcpRoute.parentRefs:
+        - name: gw
+    asserts:
+      - failedTemplate:
+          errorPattern: "server.relayHttpRoute.enabled and server.relayTcpRoute.enabled are mutually exclusive"
+
+  - it: should fail when dashboard ingress and httpRoute are both enabled
+    set:
+      dashboard.ingress.enabled: true
+      dashboard.httpRoute.enabled: true
+      dashboard.httpRoute.parentRefs:
+        - name: gw
+    asserts:
+      - failedTemplate:
+          errorPattern: "dashboard.ingress.enabled and dashboard.httpRoute.enabled are mutually exclusive"
+
+  - it: should fail when httpRoute enabled without parentRefs
+    set:
+      server.httpRoute.enabled: true
+    asserts:
+      - failedTemplate:
+          errorPattern: "server.httpRoute.parentRefs is empty"
+
+  - it: should fail when ingressGrpc is enabled without TLS
+    set:
+      server.ingressGrpc.enabled: true
+      server.ingressGrpc.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /signalexchange.SignalExchange
+    asserts:
+      - failedTemplate:
+          errorPattern: "server.ingressGrpc.tls is empty"
+
+  - it: should accept ingressGrpc when TLS is configured
+    set:
+      server.ingressGrpc.enabled: true
+      server.ingressGrpc.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /signalexchange.SignalExchange
+      server.ingressGrpc.tls:
+        - secretName: netbird-tls
+          hosts:
+            - netbird.example.com
+    asserts:
+      - hasDocuments:
+          count: 1

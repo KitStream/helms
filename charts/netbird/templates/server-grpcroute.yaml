@@ -1,0 +1,36 @@
+{{- if .Values.server.grpcRoute.enabled }}
+{{- $serviceName := include "netbird.server.fullname" . }}
+{{- $rules := list }}
+{{- range .Values.server.grpcRoute.rules }}
+  {{- $rule := deepCopy . }}
+  {{- if not (hasKey $rule "backendRefs") }}
+    {{- $_ := set $rule "backendRefs" (list (dict "name" $serviceName "port" 80)) }}
+  {{- end }}
+  {{- $rules = append $rules $rule }}
+{{- end }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: {{ $serviceName }}-grpc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "netbird.server.labels" . | nindent 4 }}
+    {{- with .Values.server.grpcRoute.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.server.grpcRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+    {{- toYaml .Values.server.grpcRoute.parentRefs | nindent 4 }}
+  {{- with .Values.server.grpcRoute.hostnames }}
+  hostnames:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $rules }}
+  rules:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}

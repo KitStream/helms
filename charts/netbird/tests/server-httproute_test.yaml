@@ -1,0 +1,117 @@
+suite: server HTTPRoute tests
+templates:
+  - templates/server-httproute.yaml
+tests:
+  - it: should not render when disabled
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render HTTPRoute when enabled
+    set:
+      server.httpRoute.enabled: true
+      server.httpRoute.parentRefs:
+        - name: my-gateway
+          namespace: gateway-system
+      server.httpRoute.hostnames:
+        - netbird.example.com
+      server.httpRoute.rules:
+        - matches:
+            - path: { type: PathPrefix, value: /api }
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: HTTPRoute
+      - isAPIVersion:
+          of: gateway.networking.k8s.io/v1
+
+  - it: should pass parentRefs through
+    set:
+      server.httpRoute.enabled: true
+      server.httpRoute.parentRefs:
+        - name: my-gateway
+          namespace: gateway-system
+          sectionName: https
+    asserts:
+      - equal:
+          path: spec.parentRefs[0].name
+          value: my-gateway
+      - equal:
+          path: spec.parentRefs[0].namespace
+          value: gateway-system
+      - equal:
+          path: spec.parentRefs[0].sectionName
+          value: https
+
+  - it: should pass hostnames through
+    set:
+      server.httpRoute.enabled: true
+      server.httpRoute.parentRefs:
+        - name: gw
+      server.httpRoute.hostnames:
+        - netbird.example.com
+        - netbird.example.org
+    asserts:
+      - contains:
+          path: spec.hostnames
+          content: netbird.example.com
+      - contains:
+          path: spec.hostnames
+          content: netbird.example.org
+
+  - it: should auto-fill backendRefs when omitted
+    set:
+      server.httpRoute.enabled: true
+      server.httpRoute.parentRefs:
+        - name: gw
+      server.httpRoute.rules:
+        - matches:
+            - path: { type: PathPrefix, value: /api }
+    asserts:
+      - equal:
+          path: spec.rules[0].backendRefs[0].name
+          value: RELEASE-NAME-netbird-server
+      - equal:
+          path: spec.rules[0].backendRefs[0].port
+          value: 80
+
+  - it: should pass user backendRefs through unchanged
+    set:
+      server.httpRoute.enabled: true
+      server.httpRoute.parentRefs:
+        - name: gw
+      server.httpRoute.rules:
+        - matches:
+            - path: { type: PathPrefix, value: /api }
+          backendRefs:
+            - name: custom-svc
+              port: 8080
+              weight: 100
+    asserts:
+      - equal:
+          path: spec.rules[0].backendRefs[0].name
+          value: custom-svc
+      - equal:
+          path: spec.rules[0].backendRefs[0].port
+          value: 8080
+      - equal:
+          path: spec.rules[0].backendRefs[0].weight
+          value: 100
+
+  - it: should render annotations and labels
+    set:
+      server.httpRoute.enabled: true
+      server.httpRoute.parentRefs:
+        - name: gw
+      server.httpRoute.annotations:
+        foo: bar
+      server.httpRoute.labels:
+        team: netbird
+    asserts:
+      - equal:
+          path: metadata.annotations.foo
+          value: bar
+      - equal:
+          path: metadata.labels.team
+          value: netbird

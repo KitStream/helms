@@ -1,0 +1,49 @@
+suite: server relay HTTPRoute tests
+templates:
+  - templates/server-relay-httproute.yaml
+tests:
+  - it: should not render when disabled
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render HTTPRoute when enabled
+    set:
+      server.relayHttpRoute.enabled: true
+      server.relayHttpRoute.parentRefs:
+        - name: gw
+      server.relayHttpRoute.rules:
+        - matches:
+            - path: { type: PathPrefix, value: /relay }
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: HTTPRoute
+
+  - it: should have -relay suffix in name
+    set:
+      server.relayHttpRoute.enabled: true
+      server.relayHttpRoute.parentRefs:
+        - name: gw
+    asserts:
+      - matchRegex:
+          path: metadata.name
+          pattern: "-relay$"
+
+  - it: should pass path matches through
+    set:
+      server.relayHttpRoute.enabled: true
+      server.relayHttpRoute.parentRefs:
+        - name: gw
+      server.relayHttpRoute.rules:
+        - matches:
+            - path: { type: PathPrefix, value: /relay }
+            - path: { type: PathPrefix, value: /ws-proxy }
+    asserts:
+      - equal:
+          path: spec.rules[0].matches[0].path.value
+          value: /relay
+      - equal:
+          path: spec.rules[0].matches[1].path.value
+          value: /ws-proxy

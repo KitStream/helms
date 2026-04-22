@@ -1,0 +1,88 @@
+suite: server GRPCRoute tests
+templates:
+  - templates/server-grpcroute.yaml
+tests:
+  - it: should not render when disabled
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render GRPCRoute when enabled
+    set:
+      server.grpcRoute.enabled: true
+      server.grpcRoute.parentRefs:
+        - name: my-gateway
+      server.grpcRoute.rules:
+        - matches:
+            - method: { service: signalexchange.SignalExchange }
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: GRPCRoute
+      - isAPIVersion:
+          of: gateway.networking.k8s.io/v1
+
+  - it: should have -grpc suffix in name
+    set:
+      server.grpcRoute.enabled: true
+      server.grpcRoute.parentRefs:
+        - name: gw
+    asserts:
+      - matchRegex:
+          path: metadata.name
+          pattern: "-grpc$"
+
+  - it: should pass method matches through
+    set:
+      server.grpcRoute.enabled: true
+      server.grpcRoute.parentRefs:
+        - name: gw
+      server.grpcRoute.rules:
+        - matches:
+            - method: { service: signalexchange.SignalExchange }
+        - matches:
+            - method: { service: management.ManagementService }
+    asserts:
+      - equal:
+          path: spec.rules[0].matches[0].method.service
+          value: signalexchange.SignalExchange
+      - equal:
+          path: spec.rules[1].matches[0].method.service
+          value: management.ManagementService
+
+  - it: should auto-fill backendRefs when omitted
+    set:
+      server.grpcRoute.enabled: true
+      server.grpcRoute.parentRefs:
+        - name: gw
+      server.grpcRoute.rules:
+        - matches:
+            - method: { service: signalexchange.SignalExchange }
+    asserts:
+      - equal:
+          path: spec.rules[0].backendRefs[0].name
+          value: RELEASE-NAME-netbird-server
+      - equal:
+          path: spec.rules[0].backendRefs[0].port
+          value: 80
+
+  - it: should support header-based matches (traefik-style)
+    set:
+      server.grpcRoute.enabled: true
+      server.grpcRoute.parentRefs:
+        - name: traefik-gateway
+          namespace: kube-system
+          sectionName: web
+      server.grpcRoute.hostnames:
+        - vpn.example.com
+      server.grpcRoute.rules:
+        - matches:
+            - headers:
+                - type: RegularExpression
+                  name: Content-Type
+                  value: "application/grpc.*"
+    asserts:
+      - equal:
+          path: spec.rules[0].matches[0].headers[0].name
+          value: Content-Type
