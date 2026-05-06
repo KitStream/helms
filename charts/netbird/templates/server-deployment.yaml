@@ -38,6 +38,11 @@ spec:
 {{- $generated := include "netbird.server.generatedSecretName" . }}
 {{- $authSecretName := include "netbird.server.resolveSecretName" (dict "ref" .Values.server.secrets.authSecret "generated" $generated) }}
 {{- $encKeySecretName := include "netbird.server.resolveSecretName" (dict "ref" .Values.server.secrets.storeEncryptionKey "generated" $generated) }}
+{{- $relayConfigured := gt (len .Values.server.config.relays.addresses) 0 }}
+{{- $relaySecretName := "" }}
+{{- if $relayConfigured }}
+{{- $relaySecretName = include "netbird.server.resolveSecretName" (dict "ref" .Values.server.secrets.relaySecret "generated" $generated) }}
+{{- end }}
 {{- $isExternal := eq (include "netbird.database.isExternal" .) "true" }}
 {{- $patSidecar := and .Values.pat.enabled (not $isExternal) }}
       initContainers:
@@ -116,6 +121,18 @@ spec:
 {{- else }}
             - name: ENCRYPTION_KEY
               value: ""
+{{- end }}
+{{- if $relayConfigured }}
+{{- if $relaySecretName }}
+            - name: RELAY_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $relaySecretName }}
+                  key: {{ .Values.server.secrets.relaySecret.secretKey }}
+{{- else }}
+            - name: RELAY_SECRET
+              value: ""
+{{- end }}
 {{- end }}
 {{- if $isExternal }}
             - name: DB_PASSWORD

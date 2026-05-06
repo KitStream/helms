@@ -289,6 +289,16 @@ server:
     engine: {{ include "netbird.database.engine" . | quote }}
     dsn: {{ if eq (include "netbird.database.isExternal" .) "true" }}"{{ include "netbird.database.dsn" . }}"{{ else }}""{{ end }}
     encryptionKey: "${ENCRYPTION_KEY}"
+  {{- if .Values.server.config.relays.addresses }}
+
+  relays:
+    addresses:
+    {{- range .Values.server.config.relays.addresses }}
+      - {{ include "netbird.escapeEnvsubst" . | quote }}
+    {{- end }}
+    credentialsTTL: {{ include "netbird.escapeEnvsubst" .Values.server.config.relays.credentialsTTL | quote }}
+    secret: "${RELAY_SECRET}"
+  {{- end }}
   {{- if .Values.oidc.enabled }}
 
   http:

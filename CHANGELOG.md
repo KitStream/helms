@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - **netbird**: Add `server.stunService.nodePort` value to allow specifying a
   fixed NodePort number when `server.stunService.type` is `NodePort`.
+- **netbird**: External relay configuration via `server.config.relays`
+  (`addresses`, `credentialsTTL`) and a dedicated
+  `server.secrets.relaySecret` reference. When `relays.addresses` is
+  non-empty the embedded relay is disabled and peers are directed at the
+  listed external relay URLs. The relay credential secret is taken from
+  `relaySecret` (with `autoGenerate` and `secretName` semantics
+  matching `authSecret`). When `relays.addresses` is empty (default) the
+  embedded relay continues to run and re-uses `authSecret` exactly as
+  before. Helps users whose relay hostname differs from the management
+  hostname or who run a separate relay deployment. Refs #83.
+- **netbird**: E2E test now verifies relay reachability — runs
+  `netbird status --detail` inside a registered peer pod and asserts the
+  relay shows `is Available`, catching regressions where peers can
+  register but the relay path is broken. Refs #83.
 
 ## [0.4.2] — 2026-04-21
 

@@ -357,6 +357,22 @@ server:
       cliRedirectURIs:
         - "http://localhost:53000/"
 
+    # -- External relay override.
+    # By default (addresses empty) the combined server runs an embedded relay
+    # on listenAddress and advertises rels://<exposedAddress-host>:<port> to
+    # peers, sharing server.secrets.authSecret as the relay credential secret.
+    # When addresses is non-empty the embedded relay is NOT started; peers
+    # receive these addresses for relay candidate gathering and the credential
+    # secret is taken from server.secrets.relaySecret. Use this when the
+    # public relay hostname differs from the management hostname, or when the
+    # relay is hosted on a separate deployment.
+    relays:
+      # -- List of public relay URLs (e.g. "rels://relay.example.com:443").
+      # When non-empty the embedded relay is disabled.
+      addresses: []
+      # -- Time-to-live for HMAC relay credentials handed to peers.
+      credentialsTTL: "12h"
+
   # ---------------------------------------------------------------------------
   # Secret references — sensitive config.yaml values
   #
@@ -390,6 +406,21 @@ server:
       secretKey: "encryptionKey"
       # -- Auto-generate on first install.
       autoGenerate: true
+
+    # -- HMAC shared secret used to validate credentials against an external
+    # relay. Only consumed when server.config.relays.addresses is non-empty;
+    # when the embedded relay is in use it shares the authSecret instead.
+    # Provide an existing Secret matching the secret your external relay
+    # was deployed with, or set autoGenerate to have the chart create one
+    # (you'll then need to configure your external relay with the same
+    # value).
+    relaySecret:
+      # -- Name of an existing Kubernetes Secret. Leave empty to auto-generate.
+      secretName: ""
+      # -- Key within the Secret.
+      secretKey: "relaySecret"
+      # -- Auto-generate on first install.
+      autoGenerate: false
 
   # -- Persistent volume for server data.
   persistentVolume:

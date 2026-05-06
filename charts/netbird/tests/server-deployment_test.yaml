@@ -206,6 +206,46 @@ tests:
             name: DB_PASSWORD
           any: true
 
+  # ── Relay env wiring (issue #83) ──────────────────────────────────────
+
+  - it: should not inject RELAY_SECRET env var when relays are not configured
+    asserts:
+      - notContains:
+          path: spec.template.spec.initContainers[0].env
+          content:
+            name: RELAY_SECRET
+          any: true
+
+  - it: should inject RELAY_SECRET env var from external secret when configured
+    set:
+      server.config.relays.addresses:
+        - "rels://relay.example.com:443"
+      server.secrets.relaySecret.secretName: my-relay-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[0].env
+          content:
+            name: RELAY_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: my-relay-secret
+                key: relaySecret
+
+  - it: should inject RELAY_SECRET env var from auto-generated secret when configured
+    set:
+      server.config.relays.addresses:
+        - "rels://relay.example.com:443"
+      server.secrets.relaySecret.autoGenerate: true
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[0].env
+          content:
+            name: RELAY_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-netbird-server-generated
+                key: relaySecret
+
   # ── Init containers: db-wait + db-seed for external DB ───────────────
 
   - it: should add db-wait and db-seed init containers for postgresql
