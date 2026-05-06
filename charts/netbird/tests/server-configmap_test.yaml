@@ -455,3 +455,62 @@ tests:
     asserts:
       - hasDocuments:
           count: 1
+
+  # ── Relay configuration (issue #83) ───────────────────────────────────
+
+  - it: should not render relays block when no relay addresses configured
+    asserts:
+      - notMatchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: "(?m)^\\s+relays:"
+
+  - it: should render relays block with addresses and secret placeholder
+    set:
+      server.config.relays.addresses:
+        - "rels://relay.example.com:443"
+      server.secrets.relaySecret.secretName: my-relay-secret
+    asserts:
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: "(?s)relays:\\s*\\n\\s+addresses:\\s*\\n\\s+- \"rels://relay\\.example\\.com:443\""
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: 'credentialsTTL: "12h"'
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: 'secret: "\$\{RELAY_SECRET\}"'
+
+  - it: should render multiple relay addresses
+    set:
+      server.config.relays.addresses:
+        - "rels://relay-1.example.com:443"
+        - "rels://relay-2.example.com:443"
+      server.secrets.relaySecret.secretName: my-relay-secret
+    asserts:
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: '"rels://relay-1\.example\.com:443"'
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: '"rels://relay-2\.example\.com:443"'
+
+  - it: should render configurable credentialsTTL
+    set:
+      server.config.relays.addresses:
+        - "rels://relay.example.com:443"
+      server.config.relays.credentialsTTL: "1h"
+      server.secrets.relaySecret.secretName: my-relay-secret
+    asserts:
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: 'credentialsTTL: "1h"'
+
+  - it: should escape dollar signs in relay addresses
+    set:
+      server.config.relays.addresses:
+        - "rels://relay$weird.example.com:443"
+      server.secrets.relaySecret.secretName: my-relay-secret
+    asserts:
+      - matchRegex:
+          path: data["config.yaml.tpl"]
+          pattern: '"rels://relay\$\{DOLLAR\}weird\.example\.com:443"'
