@@ -543,4 +543,38 @@ kubectl -n "$NAMESPACE" wait --for=jsonpath='{.status.phase}'=Succeeded pod/peer
 log "peer-verify pod logs:"
 kubectl -n "$NAMESPACE" logs peer-verify || true
 
-log "E2E test with $BACKEND backend PASSED (including PAT seeding, peer registration, and network map sync)!"
+# ── Verify relay reachability (issue #83) ────────────────────────────
+# Run `netbird status --detail` inside one of the peer pods and parse
+# the Relays block. The line for the relay URL must say "is Available";
+# anything else (e.g. "is Unavailable, reason: relay client not connected")
+# means the embedded relay isn't actually reachable, which is exactly
+# the symptom reported in issue #83.
+#
+# We poll for up to 60s because relay connection is established
+# asynchronously after `netbird up` returns.
+log "Verifying relay availability via 'netbird status --detail'..."
+RELAY_OK=0
+RELAY_STATUS_OUTPUT=""
+for i in $(seq 1 20); do
+  RELAY_STATUS_OUTPUT=$(kubectl -n "$NAMESPACE" exec netbird-peer-1 -- netbird status --detail 2>&1 || true)
+  # Extract the Relays section (between "Relays:" and the next blank line
+  # or the next top-level header) and look for an "is Available" entry
+  # whose URL starts with "rel" (covers both rel:// and rels://).
+  RELAYS_BLOCK=$(echo "$RELAY_STATUS_OUTPUT" | awk '/^Relays:/{flag=1;next} /^[A-Za-z].*:$/{flag=0} flag')
+  if echo "$RELAYS_BLOCK" | grep -E '^\s*\[rels?://[^]]+\] is Available' >/dev/null; then
+    RELAY_OK=1
+    break
+  fi
+  sleep 3
+done
+
+if [ "$RELAY_OK" -ne 1 ]; then
+  log "Final 'netbird status --detail' output:"
+  echo "$RELAY_STATUS_OUTPUT"
+  log "netbird-peer-1 logs (last 80 lines):"
+  kubectl -n "$NAMESPACE" logs netbird-peer-1 2>/dev/null | tail -80 || true
+  fail "Relay never reached Available state — issue #83 regression"
+fi
+log "Relay is Available — relay reachability verified"
+
+log "E2E test with $BACKEND backend PASSED (including PAT seeding, peer registration, network map sync, and relay reachability)!"

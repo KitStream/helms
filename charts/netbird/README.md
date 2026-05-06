@@ -716,17 +716,30 @@ ADFS) can be tested manually:
 | `server.config.auth.signKeyRefreshEnabled` | bool   | `true`                        | Auto-refresh IdP signing keys                                                         |
 | `server.config.auth.dashboardRedirectURIs` | list   | `[]`                          | Dashboard OAuth2 redirect URIs                                                        |
 | `server.config.auth.cliRedirectURIs`       | list   | `["http://localhost:53000/"]` | CLI redirect URIs                                                                     |
+| `server.config.relays.addresses`           | list   | `[]`                          | External relay URLs (e.g. `rels://relay.example.com:443`); empty = run embedded relay |
+| `server.config.relays.credentialsTTL`      | string | `"12h"`                       | TTL for HMAC relay credentials handed to peers                                        |
+
+By default the combined NetBird server runs an embedded relay on
+`server.config.listenAddress` and advertises
+`rels://<exposedAddress-host>:<port>` to peers, sharing
+`server.secrets.authSecret` as the relay credential secret. Set
+`server.config.relays.addresses` to point peers at an external relay
+instead — this disables the embedded relay and uses
+`server.secrets.relaySecret` for the credential secret.
 
 #### Server Secrets
 
-| Key                                              | Type   | Default           | Description                                  |
-| ------------------------------------------------ | ------ | ----------------- | -------------------------------------------- |
-| `server.secrets.authSecret.secretName`           | string | `""`              | Existing Secret name (empty = auto-generate) |
-| `server.secrets.authSecret.secretKey`            | string | `"authSecret"`    | Key in the Secret                            |
-| `server.secrets.authSecret.autoGenerate`         | bool   | `true`            | Auto-generate on first install               |
-| `server.secrets.storeEncryptionKey.secretName`   | string | `""`              | Existing Secret name (empty = auto-generate) |
-| `server.secrets.storeEncryptionKey.secretKey`    | string | `"encryptionKey"` | Key in the Secret                            |
-| `server.secrets.storeEncryptionKey.autoGenerate` | bool   | `true`            | Auto-generate on first install               |
+| Key                                              | Type   | Default           | Description                                                |
+| ------------------------------------------------ | ------ | ----------------- | ---------------------------------------------------------- |
+| `server.secrets.authSecret.secretName`           | string | `""`              | Existing Secret name (empty = auto-generate)               |
+| `server.secrets.authSecret.secretKey`            | string | `"authSecret"`    | Key in the Secret                                          |
+| `server.secrets.authSecret.autoGenerate`         | bool   | `true`            | Auto-generate on first install                             |
+| `server.secrets.storeEncryptionKey.secretName`   | string | `""`              | Existing Secret name (empty = auto-generate)               |
+| `server.secrets.storeEncryptionKey.secretKey`    | string | `"encryptionKey"` | Key in the Secret                                          |
+| `server.secrets.storeEncryptionKey.autoGenerate` | bool   | `true`            | Auto-generate on first install                             |
+| `server.secrets.relaySecret.secretName`          | string | `""`              | Existing Secret name (only consumed for external relay)    |
+| `server.secrets.relaySecret.secretKey`           | string | `"relaySecret"`   | Key in the Secret                                          |
+| `server.secrets.relaySecret.autoGenerate`        | bool   | `false`           | Auto-generate on first install (only when relays are set)  |
 
 #### Server Storage
 
