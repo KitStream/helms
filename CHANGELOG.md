@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Changed
+
+- **netbird**: Bump appVersion from 0.68.3 to 0.72.3. Notable upstream
+  additions: IPv6 overlay addressing (opt-in, dual-stack), MFA for embedded-IdP
+  users, private service expose over tunnel peers, WebSocket relay fallback for
+  oversized QUIC datagrams, and a relay fix preserving non-standard ports in
+  the WS dialer URL. No config options, env vars, or ports were removed;
+  database migrations run automatically.
+  See [v0.72.3 release notes](https://github.com/netbirdio/netbird/releases/tag/v0.72.3) (#99).
+- **netbird**: Bump dashboard image from v2.32.4 to v2.39.0 — the dashboard
+  release paired with server 0.72.x, required for the private-service-expose
+  and IPv6/MFA settings UI (#99).
+
 ### Added
 
 - **netbird**: Add `server.stunService.nodePort` value to allow specifying a
