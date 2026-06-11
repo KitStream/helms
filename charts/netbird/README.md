@@ -729,17 +729,17 @@ instead — this disables the embedded relay and uses
 
 #### Server Secrets
 
-| Key                                              | Type   | Default           | Description                                                |
-| ------------------------------------------------ | ------ | ----------------- | ---------------------------------------------------------- |
-| `server.secrets.authSecret.secretName`           | string | `""`              | Existing Secret name (empty = auto-generate)               |
-| `server.secrets.authSecret.secretKey`            | string | `"authSecret"`    | Key in the Secret                                          |
-| `server.secrets.authSecret.autoGenerate`         | bool   | `true`            | Auto-generate on first install                             |
-| `server.secrets.storeEncryptionKey.secretName`   | string | `""`              | Existing Secret name (empty = auto-generate)               |
-| `server.secrets.storeEncryptionKey.secretKey`    | string | `"encryptionKey"` | Key in the Secret                                          |
-| `server.secrets.storeEncryptionKey.autoGenerate` | bool   | `true`            | Auto-generate on first install                             |
-| `server.secrets.relaySecret.secretName`          | string | `""`              | Existing Secret name (only consumed for external relay)    |
-| `server.secrets.relaySecret.secretKey`           | string | `"relaySecret"`   | Key in the Secret                                          |
-| `server.secrets.relaySecret.autoGenerate`        | bool   | `false`           | Auto-generate on first install (only when relays are set)  |
+| Key                                              | Type   | Default           | Description                                               |
+| ------------------------------------------------ | ------ | ----------------- | --------------------------------------------------------- |
+| `server.secrets.authSecret.secretName`           | string | `""`              | Existing Secret name (empty = auto-generate)              |
+| `server.secrets.authSecret.secretKey`            | string | `"authSecret"`    | Key in the Secret                                         |
+| `server.secrets.authSecret.autoGenerate`         | bool   | `true`            | Auto-generate on first install                            |
+| `server.secrets.storeEncryptionKey.secretName`   | string | `""`              | Existing Secret name (empty = auto-generate)              |
+| `server.secrets.storeEncryptionKey.secretKey`    | string | `"encryptionKey"` | Key in the Secret                                         |
+| `server.secrets.storeEncryptionKey.autoGenerate` | bool   | `true`            | Auto-generate on first install                            |
+| `server.secrets.relaySecret.secretName`          | string | `""`              | Existing Secret name (only consumed for external relay)   |
+| `server.secrets.relaySecret.secretKey`           | string | `"relaySecret"`   | Key in the Secret                                         |
+| `server.secrets.relaySecret.autoGenerate`        | bool   | `false`           | Auto-generate on first install (only when relays are set) |
 
 #### Server Storage
 
