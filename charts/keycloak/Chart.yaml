@@ -3,7 +3,7 @@ name: keycloak
 description: A Helm chart for deploying Keycloak IAM using the upstream quay.io/keycloak/keycloak image on Kubernetes
 type: application
 version: 26.6.1
-appVersion: "26.6.1"
+appVersion: "26.6.3"
 keywords:
   - keycloak
   - iam

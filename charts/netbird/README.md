@@ -836,7 +836,7 @@ terminated at the referenced Gateway's listeners, not in these values.
 | ---------------------------- | ------ | ----------------------- | ---------------------------- |
 | `dashboard.replicaCount`     | int    | `1`                     | Number of dashboard replicas |
 | `dashboard.image.repository` | string | `"netbirdio/dashboard"` | Dashboard image              |
-| `dashboard.image.tag`        | string | `"v2.32.4"`             | Dashboard image tag          |
+| `dashboard.image.tag`        | string | `"v2.39.0"`             | Dashboard image tag          |
 | `dashboard.image.pullPolicy` | string | `"IfNotPresent"`        | Image pull policy            |
 | `dashboard.imagePullSecrets` | list   | `[]`                    | Component-level pull secrets |
 

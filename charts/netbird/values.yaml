@@ -589,7 +589,7 @@ dashboard:
 
   image:
     repository: netbirdio/dashboard
-    tag: "v2.32.4"
+    tag: "v2.39.0"
     pullPolicy: IfNotPresent
 
   imagePullSecrets: []
