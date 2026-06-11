@@ -12,6 +12,10 @@ metadata:
 spec:
   type: ClusterIP
   clusterIP: None
+  # JGroups discovery must resolve peers before they are Ready, otherwise
+  # simultaneously started replicas form singleton clusters and merge late
+  # (split-brain), leaving stale caches on the minority side.
+  publishNotReadyAddresses: true
   ports:
     - name: jgroups
       port: {{ .Values.headlessService.jgroupsPort }}

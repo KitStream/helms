@@ -12,6 +12,12 @@ tests:
           path: spec.clusterIP
           value: None
 
+  - it: should publish not-ready addresses for JGroups discovery
+    asserts:
+      - equal:
+          path: spec.publishNotReadyAddresses
+          value: true
+
   - it: should expose jgroups port
     asserts:
       - contains:
