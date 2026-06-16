@@ -4,7 +4,7 @@
 {{- range .Values.server.relayHttpRoute.rules }}
   {{- $rule := deepCopy . }}
   {{- if not (hasKey $rule "backendRefs") }}
-    {{- $_ := set $rule "backendRefs" (list (dict "name" $serviceName "port" 80)) }}
+    {{- $_ := set $rule "backendRefs" (list (dict "name" (printf "%s-relay" $serviceName) "port" 80)) }}
   {{- end }}
   {{- $rules = append $rules $rule }}
 {{- end }}

@@ -31,12 +31,10 @@ annotations:
       url: https://github.com/KitStream/initium
   artifacthub.io/changes: |
     - kind: added
-      description: Gateway API support (HTTPRoute, GRPCRoute, TCPRoute) as an alternative to Ingress, with fail-fast validation rejecting ingressGrpc without TLS
+      description: Add dedicated server-grpc Service with appProtocol kubernetes.io/h2c for Envoy-based Gateway API controllers (Cilium, Envoy Gateway)
     - kind: added
-      description: External relay configuration via server.config.relays with dedicated relay credential secret
-    - kind: added
-      description: server.stunService.nodePort value for a fixed STUN NodePort
+      description: Add dedicated server-relay Service with appProtocol kubernetes.io/ws for Envoy-based Gateway API controllers (Cilium, Envoy Gateway)
     - kind: changed
-      description: Bump NetBird from 0.68.3 to 0.72.3
+      description: GRPCRoute default backendRef now points to the server-grpc Service when backendRefs is not specified
     - kind: changed
-      description: Bump dashboard image from v2.32.4 to v2.39.0
+      description: Relay HTTPRoute default backendRef now points to the server-relay Service when backendRefs is not specified
