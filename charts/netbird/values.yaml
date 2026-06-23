@@ -547,6 +547,7 @@ server:
     # - matches:
     #     - method: { service: signalexchange.SignalExchange }
     #     - method: { service: management.ManagementService }
+    #     - method: { service: management.ProxyService }
     annotations: {}
     labels: {}
 
