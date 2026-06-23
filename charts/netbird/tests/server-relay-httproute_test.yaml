@@ -47,3 +47,43 @@ tests:
       - equal:
           path: spec.rules[0].matches[1].path.value
           value: /ws-proxy
+
+  - it: should auto-fill backendRefs to the dedicated relay service when omitted
+    set:
+      server.relayHttpRoute.enabled: true
+      server.relayHttpRoute.parentRefs:
+        - name: gw
+      server.relayHttpRoute.rules:
+        - matches:
+            - path: { type: PathPrefix, value: /relay }
+    asserts:
+      - equal:
+          path: spec.rules[0].backendRefs[0].name
+          value: RELEASE-NAME-netbird-server-relay
+      - equal:
+          path: spec.rules[0].backendRefs[0].port
+          value: 80
+
+  - it: should fall back to the main service when relayService is disabled
+    set:
+      server.relayHttpRoute.enabled: true
+      server.relayService.enabled: false
+      server.relayHttpRoute.parentRefs:
+        - name: gw
+      server.relayHttpRoute.rules:
+        - matches:
+            - path: { type: PathPrefix, value: /relay }
+    asserts:
+      - equal:
+          path: spec.rules[0].backendRefs[0].name
+          value: RELEASE-NAME-netbird-server
+
+  - it: should keep the route name unchanged when relayService is enabled
+    set:
+      server.relayHttpRoute.enabled: true
+      server.relayHttpRoute.parentRefs:
+        - name: gw
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-netbird-server-relay

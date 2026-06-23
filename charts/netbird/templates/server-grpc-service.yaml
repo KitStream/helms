@@ -1,0 +1,25 @@
+{{- if and .Values.server.grpcService.enabled .Values.server.grpcRoute.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "netbird.server.fullname" . }}-grpc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "netbird.server.labels" . | nindent 4 }}
+  {{- with .Values.server.grpcService.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: grpc
+      port: {{ .Values.server.grpcService.port }}
+      targetPort: http
+      protocol: TCP
+      {{- with .Values.server.grpcService.appProtocol }}
+      appProtocol: {{ . }}
+      {{- end }}
+  selector:
+    {{- include "netbird.server.selectorLabels" . | nindent 4 }}
+{{- end }}

@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Added
+
+- **netbird**: Dedicated gRPC and relay Services with `appProtocol`, so
+  Envoy-based Gateway API controllers (Cilium, Envoy Gateway) configure the
+  correct upstream protocol. `server.grpcService` renders
+  `<release>-server-grpc` with `appProtocol: kubernetes.io/h2c` (HTTP/2) and
+  `server.relayService` renders `<release>-server-relay` with
+  `appProtocol: kubernetes.io/ws` (WebSocket). `server.grpcRoute` and
+  `server.relayHttpRoute` now auto-fill omitted `backendRefs` to these
+  Services. Both are enabled by default and only render when their route is
+  enabled; set `enabled: false` to fall back to the main Service. Previously
+  all routes shared the main Service (no `appProtocol`), which forced an
+  HTTP/1.1 upstream and broke gRPC and WebSocket on those controllers.
+  Fixes #104.
+
+### Changed
+
+- **netbird**: Bump appVersion from 0.72.3 to 0.73.2. Upstream changes are
+  internal (management/signal/relay stability and performance, posture-check
+  hardening); no config options, env vars, ports, or protocols changed, and
+  no database migration steps are required. Dashboard image stays at v2.39.0.
+  See [v0.73.2 release notes](https://github.com/netbirdio/netbird/releases/tag/v0.73.2) (#112).
+
 ## [0.5.0] — 2026-06-11
 
 ### Changed

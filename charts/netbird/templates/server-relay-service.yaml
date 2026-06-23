@@ -1,0 +1,25 @@
+{{- if and .Values.server.relayService.enabled .Values.server.relayHttpRoute.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "netbird.server.fullname" . }}-relay
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "netbird.server.labels" . | nindent 4 }}
+  {{- with .Values.server.relayService.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: relay
+      port: {{ .Values.server.relayService.port }}
+      targetPort: http
+      protocol: TCP
+      {{- with .Values.server.relayService.appProtocol }}
+      appProtocol: {{ . }}
+      {{- end }}
+  selector:
+    {{- include "netbird.server.selectorLabels" . | nindent 4 }}
+{{- end }}

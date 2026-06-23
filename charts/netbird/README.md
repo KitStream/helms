@@ -289,16 +289,47 @@ dashboard:
           - path: { type: PathPrefix, value: / }
 ```
 
-Rules that omit `backendRefs` get the netbird server / dashboard `Service`
-auto-filled on port 80. Specify `backendRefs` explicitly for traffic
-splitting or non-default ports.
+Rules that omit `backendRefs` get a netbird server `Service` auto-filled on
+port 80. The target depends on the traffic class:
+
+- `server.httpRoute` → the main server `Service` (`<release>-server`).
+- `server.grpcRoute` → the dedicated gRPC `Service` (`<release>-server-grpc`).
+- `server.relayHttpRoute` → the dedicated relay `Service`
+  (`<release>-server-relay`).
+
+Specify `backendRefs` explicitly for traffic splitting or non-default ports.
+
+### Dedicated gRPC and relay Services (`appProtocol`)
+
+gRPC and relay (WebSocket) traffic cannot share the plain main `Service`
+when the Gateway controller is Envoy-based (**Cilium**, **Envoy Gateway**):
+those controllers read a Service port's `appProtocol` to pick the upstream
+codec, and a Service with no `appProtocol` is treated as HTTP/1.1 — which
+breaks gRPC (needs an HTTP/2 / h2c upstream) and WebSocket (needs upgrade
+handling). The chart therefore renders two extra `ClusterIP` Services with
+the same selector as the main Service but distinct `appProtocol`:
+
+| Service                  | appProtocol         | Rendered when              | Consumed by             |
+| ------------------------ | ------------------- | -------------------------- | ----------------------- |
+| `<release>-server-grpc`  | `kubernetes.io/h2c` | `server.grpcRoute` on      | `server.grpcRoute`      |
+| `<release>-server-relay` | `kubernetes.io/ws`  | `server.relayHttpRoute` on | `server.relayHttpRoute` |
+
+These are enabled by default (`server.grpcService.enabled`,
+`server.relayService.enabled`) and only render when their route is enabled.
+Set either to `false` to fall back to the main Service. You can also
+reference the Services by name in your own `backendRefs`.
+
+> **Cilium:** set the Cilium Helm value `gatewayAPI.enableAppProtocol=true`
+> so Cilium honours `appProtocol`. For Envoy Gateway, ensure the
+> `EnvoyProxy`/`BackendTLSPolicy` config respects `appProtocol`.
 
 For deployments that expose relay as a raw TCP listener (no HTTP path
 matching), use `server.relayTcpRoute` — apiVersion
 `gateway.networking.k8s.io/v1alpha2`. TCPRoute ships in the Gateway API
 **experimental channel**; make sure its CRDs are installed
 (`experimental-install.yaml` from the Gateway API release) before
-enabling it.
+enabling it. Raw TCP carries no `appProtocol`, so `relayTcpRoute` keeps
+defaulting its backendRefs to the main Service.
 
 ## STUN Networking
 
@@ -789,31 +820,39 @@ Gateway API alternatives to the Ingress blocks above. Enabling both an
 Ingress and its matching route block is a template-time error. TLS is
 terminated at the referenced Gateway's listeners, not in these values.
 
-| Key                                 | Type   | Default | Description                                                                           |
-| ----------------------------------- | ------ | ------- | ------------------------------------------------------------------------------------- |
-| `server.httpRoute.enabled`          | bool   | `false` | Create `HTTPRoute` for HTTP (API + OAuth2). Requires `parentRefs`.                    |
-| `server.httpRoute.parentRefs`       | list   | `[]`    | Gateways to attach to (`name`, `namespace`, optional `sectionName`).                  |
-| `server.httpRoute.hostnames`        | list   | `[]`    | HTTPRoute hostnames                                                                   |
-| `server.httpRoute.rules`            | list   | `[]`    | `HTTPRoute.spec.rules`. Omitted `backendRefs` default to server Service on port 80.   |
-| `server.httpRoute.annotations`      | object | `{}`    | Route annotations                                                                     |
-| `server.httpRoute.labels`           | object | `{}`    | Extra labels                                                                          |
-| `server.grpcRoute.enabled`          | bool   | `false` | Create `GRPCRoute` for Signal + Management. Works with plaintext h2c.                 |
-| `server.grpcRoute.parentRefs`       | list   | `[]`    | Gateway parent refs                                                                   |
-| `server.grpcRoute.hostnames`        | list   | `[]`    | GRPCRoute hostnames                                                                   |
-| `server.grpcRoute.rules`            | list   | `[]`    | `GRPCRoute.spec.rules` (method or header matches)                                     |
-| `server.grpcRoute.annotations`      | object | `{}`    | Route annotations                                                                     |
-| `server.grpcRoute.labels`           | object | `{}`    | Extra labels                                                                          |
-| `server.relayHttpRoute.enabled`     | bool   | `false` | Create `HTTPRoute` for relay + WebSocket (default Gateway API path).                  |
-| `server.relayHttpRoute.parentRefs`  | list   | `[]`    | Gateway parent refs                                                                   |
-| `server.relayHttpRoute.hostnames`   | list   | `[]`    | HTTPRoute hostnames                                                                   |
-| `server.relayHttpRoute.rules`       | list   | `[]`    | `HTTPRoute.spec.rules`                                                                |
-| `server.relayHttpRoute.annotations` | object | `{}`    | Route annotations                                                                     |
-| `server.relayHttpRoute.labels`      | object | `{}`    | Extra labels                                                                          |
-| `server.relayTcpRoute.enabled`      | bool   | `false` | Create `TCPRoute` (`v1alpha2`) for raw-TCP relay listeners.                           |
-| `server.relayTcpRoute.parentRefs`   | list   | `[]`    | Gateway parent refs                                                                   |
-| `server.relayTcpRoute.rules`        | list   | `[]`    | `TCPRoute.spec.rules`. Defaults to a single rule targeting server Service on port 80. |
-| `server.relayTcpRoute.annotations`  | object | `{}`    | Route annotations                                                                     |
-| `server.relayTcpRoute.labels`       | object | `{}`    | Extra labels                                                                          |
+| Key                                 | Type   | Default             | Description                                                                                                                             |
+| ----------------------------------- | ------ | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `server.httpRoute.enabled`          | bool   | `false`             | Create `HTTPRoute` for HTTP (API + OAuth2). Requires `parentRefs`.                                                                      |
+| `server.httpRoute.parentRefs`       | list   | `[]`                | Gateways to attach to (`name`, `namespace`, optional `sectionName`).                                                                    |
+| `server.httpRoute.hostnames`        | list   | `[]`                | HTTPRoute hostnames                                                                                                                     |
+| `server.httpRoute.rules`            | list   | `[]`                | `HTTPRoute.spec.rules`. Omitted `backendRefs` default to server Service on port 80.                                                     |
+| `server.httpRoute.annotations`      | object | `{}`                | Route annotations                                                                                                                       |
+| `server.httpRoute.labels`           | object | `{}`                | Extra labels                                                                                                                            |
+| `server.grpcRoute.enabled`          | bool   | `false`             | Create `GRPCRoute` for Signal + Management. Works with plaintext h2c.                                                                   |
+| `server.grpcRoute.parentRefs`       | list   | `[]`                | Gateway parent refs                                                                                                                     |
+| `server.grpcRoute.hostnames`        | list   | `[]`                | GRPCRoute hostnames                                                                                                                     |
+| `server.grpcRoute.rules`            | list   | `[]`                | `GRPCRoute.spec.rules` (method or header matches)                                                                                       |
+| `server.grpcRoute.annotations`      | object | `{}`                | Route annotations                                                                                                                       |
+| `server.grpcRoute.labels`           | object | `{}`                | Extra labels                                                                                                                            |
+| `server.grpcService.enabled`        | bool   | `true`              | Render a dedicated gRPC `Service` (`appProtocol: kubernetes.io/h2c`) when `grpcRoute` is on. False falls back to the main Service.      |
+| `server.grpcService.appProtocol`    | string | `kubernetes.io/h2c` | `appProtocol` on the gRPC Service port.                                                                                                 |
+| `server.grpcService.port`           | int    | `80`                | gRPC Service port (targets the `http` container port).                                                                                  |
+| `server.grpcService.annotations`    | object | `{}`                | gRPC Service annotations                                                                                                                |
+| `server.relayHttpRoute.enabled`     | bool   | `false`             | Create `HTTPRoute` for relay + WebSocket (default Gateway API path).                                                                    |
+| `server.relayHttpRoute.parentRefs`  | list   | `[]`                | Gateway parent refs                                                                                                                     |
+| `server.relayHttpRoute.hostnames`   | list   | `[]`                | HTTPRoute hostnames                                                                                                                     |
+| `server.relayHttpRoute.rules`       | list   | `[]`                | `HTTPRoute.spec.rules`                                                                                                                  |
+| `server.relayHttpRoute.annotations` | object | `{}`                | Route annotations                                                                                                                       |
+| `server.relayHttpRoute.labels`      | object | `{}`                | Extra labels                                                                                                                            |
+| `server.relayService.enabled`       | bool   | `true`              | Render a dedicated relay `Service` (`appProtocol: kubernetes.io/ws`) when `relayHttpRoute` is on. False falls back to the main Service. |
+| `server.relayService.appProtocol`   | string | `kubernetes.io/ws`  | `appProtocol` on the relay Service port.                                                                                                |
+| `server.relayService.port`          | int    | `80`                | Relay Service port (targets the `http` container port).                                                                                 |
+| `server.relayService.annotations`   | object | `{}`                | Relay Service annotations                                                                                                               |
+| `server.relayTcpRoute.enabled`      | bool   | `false`             | Create `TCPRoute` (`v1alpha2`) for raw-TCP relay listeners.                                                                             |
+| `server.relayTcpRoute.parentRefs`   | list   | `[]`                | Gateway parent refs                                                                                                                     |
+| `server.relayTcpRoute.rules`        | list   | `[]`                | `TCPRoute.spec.rules`. Defaults to a single rule targeting server Service on port 80.                                                   |
+| `server.relayTcpRoute.annotations`  | object | `{}`                | Route annotations                                                                                                                       |
+| `server.relayTcpRoute.labels`       | object | `{}`                | Extra labels                                                                                                                            |
 
 #### Server Pod
 

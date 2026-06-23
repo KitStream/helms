@@ -51,7 +51,7 @@ tests:
           path: spec.rules[1].matches[0].method.service
           value: management.ManagementService
 
-  - it: should auto-fill backendRefs when omitted
+  - it: should auto-fill backendRefs to the dedicated gRPC service when omitted
     set:
       server.grpcRoute.enabled: true
       server.grpcRoute.parentRefs:
@@ -62,10 +62,34 @@ tests:
     asserts:
       - equal:
           path: spec.rules[0].backendRefs[0].name
-          value: RELEASE-NAME-netbird-server
+          value: RELEASE-NAME-netbird-server-grpc
       - equal:
           path: spec.rules[0].backendRefs[0].port
           value: 80
+
+  - it: should fall back to the main service when grpcService is disabled
+    set:
+      server.grpcRoute.enabled: true
+      server.grpcService.enabled: false
+      server.grpcRoute.parentRefs:
+        - name: gw
+      server.grpcRoute.rules:
+        - matches:
+            - method: { service: signalexchange.SignalExchange }
+    asserts:
+      - equal:
+          path: spec.rules[0].backendRefs[0].name
+          value: RELEASE-NAME-netbird-server
+
+  - it: should keep the route name unchanged when grpcService is enabled
+    set:
+      server.grpcRoute.enabled: true
+      server.grpcRoute.parentRefs:
+        - name: gw
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-netbird-server-grpc
 
   - it: should support header-based matches (traefik-style)
     set:

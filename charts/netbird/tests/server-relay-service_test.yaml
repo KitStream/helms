@@ -1,0 +1,81 @@
+suite: server relay service tests
+templates:
+  - templates/server-relay-service.yaml
+tests:
+  - it: should not render when relayHttpRoute is disabled
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not render when relayService is disabled even if relayHttpRoute is enabled
+    set:
+      server.relayHttpRoute.enabled: true
+      server.relayService.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render when relayHttpRoute is enabled
+    set:
+      server.relayHttpRoute.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Service
+
+  - it: should have -relay suffix in name
+    set:
+      server.relayHttpRoute.enabled: true
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-netbird-server-relay
+
+  - it: should carry the ws appProtocol by default
+    set:
+      server.relayHttpRoute.enabled: true
+    asserts:
+      - contains:
+          path: spec.ports
+          content:
+            name: relay
+            port: 80
+            targetPort: http
+            protocol: TCP
+            appProtocol: kubernetes.io/ws
+
+  - it: should allow overriding appProtocol and port
+    set:
+      server.relayHttpRoute.enabled: true
+      server.relayService.appProtocol: custom/ws
+      server.relayService.port: 8080
+    asserts:
+      - contains:
+          path: spec.ports
+          content:
+            name: relay
+            port: 8080
+            targetPort: http
+            protocol: TCP
+            appProtocol: custom/ws
+
+  - it: should share the server selector labels
+    set:
+      server.relayHttpRoute.enabled: true
+    asserts:
+      - isSubset:
+          path: spec.selector
+          content:
+            app.kubernetes.io/name: netbird
+            app.kubernetes.io/component: server
+
+  - it: should apply custom annotations
+    set:
+      server.relayHttpRoute.enabled: true
+      server.relayService.annotations:
+        example.com/foo: bar
+    asserts:
+      - equal:
+          path: metadata.annotations["example.com/foo"]
+          value: bar

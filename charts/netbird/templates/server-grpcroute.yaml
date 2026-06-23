@@ -1,10 +1,14 @@
 {{- if .Values.server.grpcRoute.enabled }}
 {{- $serviceName := include "netbird.server.fullname" . }}
+{{- $backendName := $serviceName }}
+{{- if .Values.server.grpcService.enabled }}
+  {{- $backendName = printf "%s-grpc" $serviceName }}
+{{- end }}
 {{- $rules := list }}
 {{- range .Values.server.grpcRoute.rules }}
   {{- $rule := deepCopy . }}
   {{- if not (hasKey $rule "backendRefs") }}
-    {{- $_ := set $rule "backendRefs" (list (dict "name" $serviceName "port" 80)) }}
+    {{- $_ := set $rule "backendRefs" (list (dict "name" $backendName "port" 80)) }}
   {{- end }}
   {{- $rules = append $rules $rule }}
 {{- end }}
