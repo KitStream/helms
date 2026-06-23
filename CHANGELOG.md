@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+## [0.6.0] — 2026-06-23
+
 ### Added
 
 - **netbird**: Dedicated gRPC and relay Services with `appProtocol`, so

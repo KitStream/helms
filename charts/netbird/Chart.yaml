@@ -2,7 +2,7 @@ apiVersion: v2
 name: netbird
 description: A Helm chart for deploying NetBird VPN management, signal, dashboard, and relay services on Kubernetes
 type: application
-version: 0.5.0
+version: 0.6.0
 appVersion: "0.73.2"
 keywords:
   - netbird
@@ -31,12 +31,8 @@ annotations:
       url: https://github.com/KitStream/initium
   artifacthub.io/changes: |
     - kind: added
-      description: Gateway API support (HTTPRoute, GRPCRoute, TCPRoute) as an alternative to Ingress, with fail-fast validation rejecting ingressGrpc without TLS
-    - kind: added
-      description: External relay configuration via server.config.relays with dedicated relay credential secret
-    - kind: added
-      description: server.stunService.nodePort value for a fixed STUN NodePort
+      description: Dedicated gRPC and relay Services with appProtocol (h2c/ws) so Envoy-based Gateway API controllers (Cilium, Envoy Gateway) configure the correct upstream protocol
     - kind: changed
-      description: Bump NetBird from 0.68.3 to 0.72.3
+      description: Bump NetBird from 0.72.3 to 0.73.2
     - kind: changed
-      description: Bump dashboard image from v2.32.4 to v2.39.0
+      description: Document Cilium Gateway API setup and management.ProxyService in values.yaml
