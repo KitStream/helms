@@ -508,6 +508,37 @@ server:
   # gRPC over HTTP/2 — including plaintext h2c — so this works without TLS
   # when the Gateway listener is HTTP. rules pass through to
   # GRPCRoute.spec.rules; backendRefs are auto-filled when omitted.
+  #
+  # CILIUM GATEWAY API — DEDICATED LISTENER REQUIRED:
+  # When a GRPCRoute and an HTTPRoute share the same Gateway listener section
+  # (sectionName), Cilium's translator generates a filter chain without the
+  # grpc_web/grpc_stats HTTP filters and sets the codec to HTTP1, causing all
+  # external gRPC connections to fail. Attach the GRPCRoute to a dedicated
+  # listener section that has no HTTPRoutes:
+  #
+  #   parentRefs:
+  #     - name: my-gateway
+  #       namespace: gateway-system
+  #       sectionName: netbird-grpc-https   # gRPC-only listener
+  #
+  # Set dashboard.config.mgmtGrpcApiEndpoint to the hostname served by this
+  # dedicated listener. Also enable gatewayAPI.enableAlpn=true in Cilium so
+  # that h2 is advertised in TLS ALPN and gRPC clients negotiate HTTP/2.
+  #
+  # If in-cluster components (e.g. Netbird operator, NetworkRouter) connect to
+  # the original hostname for both REST and gRPC, add a second parentRef for
+  # the shared listener so in-cluster gRPC routing continues to work:
+  #
+  #   hostnames:
+  #     - netbird.example.com        # original, for in-cluster components
+  #     - netbird-grpc.example.com   # dedicated gRPC listener, for external clients
+  #   parentRefs:
+  #     - name: my-gateway
+  #       namespace: gateway-system
+  #       sectionName: netbird-https       # shared with HTTPRoutes (in-cluster)
+  #     - name: my-gateway
+  #       namespace: gateway-system
+  #       sectionName: netbird-grpc-https  # gRPC-only (external clients)
   grpcRoute:
     enabled: false
     parentRefs: []
