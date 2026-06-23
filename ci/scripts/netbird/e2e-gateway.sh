@@ -162,9 +162,24 @@ assert_backend_ref() {
 }
 
 assert_backend_ref httproute "$RELEASE-server"       "$RELEASE-server"
-assert_backend_ref httproute "$RELEASE-server-relay" "$RELEASE-server"
+assert_backend_ref httproute "$RELEASE-server-relay" "$RELEASE-server-relay"
 assert_backend_ref httproute "$RELEASE-dashboard"    "$RELEASE-dashboard"
-assert_backend_ref grpcroute "$RELEASE-server-grpc"  "$RELEASE-server"
+assert_backend_ref grpcroute "$RELEASE-server-grpc"  "$RELEASE-server-grpc"
+
+# ── Confirm dedicated gRPC/relay Services exist with appProtocol ──────
+assert_service_app_protocol() {
+  local name="$1" expected_proto="$2"
+  local proto
+  proto=$(kubectl -n "$NAMESPACE" get service "$name" \
+    -o jsonpath='{.spec.ports[0].appProtocol}')
+  if [ "$proto" != "$expected_proto" ]; then
+    fail "service/$name ports[0].appProtocol = '$proto' (expected '$expected_proto')"
+  fi
+  log "  service/$name appProtocol = $proto ✓"
+}
+
+assert_service_app_protocol "$RELEASE-server-grpc"  "kubernetes.io/h2c"
+assert_service_app_protocol "$RELEASE-server-relay" "kubernetes.io/ws"
 
 # ── Confirm mutual-exclusion validation trips ────────────────────────
 log "Verifying template validation: enabling Ingress + HTTPRoute should fail..."

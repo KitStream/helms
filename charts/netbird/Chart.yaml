@@ -3,7 +3,7 @@ name: netbird
 description: A Helm chart for deploying NetBird VPN management, signal, dashboard, and relay services on Kubernetes
 type: application
 version: 0.5.0
-appVersion: "0.72.3"
+appVersion: "0.73.2"
 keywords:
   - netbird
   - vpn

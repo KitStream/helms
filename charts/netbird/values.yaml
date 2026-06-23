@@ -551,6 +551,22 @@ server:
     annotations: {}
     labels: {}
 
+  # -- Dedicated ClusterIP Service for gRPC traffic, carrying
+  # `appProtocol: kubernetes.io/h2c`. Envoy-based Gateway API controllers
+  # (Cilium, Envoy Gateway) read appProtocol to configure an HTTP/2 (h2c)
+  # upstream cluster; routing gRPC through the main Service (which has no
+  # appProtocol) makes them use a plain HTTP/1.1 upstream, which breaks gRPC.
+  # Rendered only when grpcRoute is enabled; grpcRoute auto-fills its
+  # backendRefs to this Service. Set enabled=false to fall back to the main
+  # Service. The Service is named "<release>-server-grpc".
+  # When using Cilium, also set the Cilium Helm value
+  # gatewayAPI.enableAppProtocol=true so the appProtocol is honored.
+  grpcService:
+    enabled: true
+    appProtocol: kubernetes.io/h2c
+    port: 80
+    annotations: {}
+
   # -- Ingress for relay and WebSocket routes.
   # Mutually exclusive with server.relayHttpRoute and server.relayTcpRoute.
   ingressRelay:
@@ -574,6 +590,20 @@ server:
     #     - path: { type: PathPrefix, value: /ws-proxy }
     annotations: {}
     labels: {}
+
+  # -- Dedicated ClusterIP Service for relay/WebSocket traffic, carrying
+  # `appProtocol: kubernetes.io/ws`. Envoy-based Gateway API controllers read
+  # appProtocol to enable WebSocket upgrade handling on the upstream cluster;
+  # routing WebSocket through the main Service (no appProtocol) makes them use
+  # a plain HTTP/1.1 upstream without upgrade support, which breaks the relay.
+  # Rendered only when relayHttpRoute is enabled; relayHttpRoute auto-fills its
+  # backendRefs to this Service. Set enabled=false to fall back to the main
+  # Service. The Service is named "<release>-server-relay".
+  relayService:
+    enabled: true
+    appProtocol: kubernetes.io/ws
+    port: 80
+    annotations: {}
 
   # -- Gateway API TCPRoute for relay exposed as raw TCP.
   # Alternative to relayHttpRoute for deployments that front relay with a
