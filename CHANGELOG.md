@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+## [0.7.0] — 2026-08-29
+
 ### Changed
 
 - **netbird**: `server.ingressGrpc.annotations` is now empty by default
