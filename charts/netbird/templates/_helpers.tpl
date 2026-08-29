@@ -157,7 +157,12 @@ create duplicate or racing rules.
   {{- end -}}
 {{- end -}}
 {{- if and .Values.server.ingressGrpc.enabled (not .Values.server.ingressGrpc.tls) -}}
-  {{- fail "server.ingressGrpc.enabled is true but server.ingressGrpc.tls is empty. gRPC over Kubernetes Ingress requires TLS: standard nginx-ingress cannot negotiate HTTP/2 cleartext (h2c) and the default `nginx.ingress.kubernetes.io/ssl-redirect: \"true\"` annotation redirects plaintext gRPC to HTTPS — without a cert, requests fail silently. Either configure server.ingressGrpc.tls, or disable server.ingressGrpc and expose gRPC via server.grpcRoute (Gateway API) with a controller that supports plaintext h2c." -}}
+  {{- fail "server.ingressGrpc.enabled is true but server.ingressGrpc.tls is empty. gRPC over Kubernetes Ingress requires TLS: standard nginx-ingress cannot negotiate HTTP/2 cleartext (h2c), so plaintext gRPC fails without a cert. Either configure server.ingressGrpc.tls, or disable server.ingressGrpc and expose gRPC via server.grpcRoute (Gateway API) with a controller that supports plaintext h2c." -}}
+{{- end -}}
+{{- if and .Values.server.ingressGrpc.enabled (contains "nginx" (toString .Values.server.ingressGrpc.className)) -}}
+  {{- if not (hasKey (.Values.server.ingressGrpc.annotations | default dict) "nginx.ingress.kubernetes.io/backend-protocol") -}}
+    {{- fail "server.ingressGrpc.className is nginx but server.ingressGrpc.annotations is missing `nginx.ingress.kubernetes.io/backend-protocol`. ingress-nginx proxies the backend as HTTP/1.1 without it, so gRPC fails. These annotations are no longer set by default (they are controller-specific and server.ingressGrpc.className is configurable). Add them to server.ingressGrpc.annotations:\n  nginx.ingress.kubernetes.io/backend-protocol: \"GRPC\"\n  nginx.ingress.kubernetes.io/ssl-redirect: \"true\"\n  nginx.ingress.kubernetes.io/proxy-read-timeout: \"3600\"\n  nginx.ingress.kubernetes.io/proxy-send-timeout: \"3600\"\nIf you are not using ingress-nginx, set server.ingressGrpc.className to your controller." -}}
+  {{- end -}}
 {{- end -}}
 {{- end }}
 

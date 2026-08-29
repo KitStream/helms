@@ -13,7 +13,7 @@ tests:
     asserts:
       - equal:
           path: spec.template.spec.containers[0].image
-          value: "quay.io/keycloak/keycloak:26.6.3"
+          value: "quay.io/keycloak/keycloak:26.7.2"
 
   - it: should use custom image tag when set
     set:
@@ -29,7 +29,7 @@ tests:
     asserts:
       - equal:
           path: spec.template.spec.containers[0].image
-          value: "my-registry/keycloak:26.6.3"
+          value: "my-registry/keycloak:26.7.2"
 
   - it: should set replica count
     set:
@@ -177,12 +177,12 @@ tests:
       - contains:
           path: spec.template.spec.containers[0].env
           content:
-            name: KEYCLOAK_ADMIN
+            name: KC_BOOTSTRAP_ADMIN_USERNAME
             value: "admin"
       - contains:
           path: spec.template.spec.containers[0].env
           content:
-            name: KEYCLOAK_ADMIN_PASSWORD
+            name: KC_BOOTSTRAP_ADMIN_PASSWORD
             valueFrom:
               secretKeyRef:
                 name: admin-secret
@@ -262,7 +262,7 @@ tests:
     asserts:
       - equal:
           path: spec.template.spec.initContainers[0].image
-          value: "quay.io/keycloak/keycloak:26.6.3"
+          value: "quay.io/keycloak/keycloak:26.7.2"
 
   - it: should set hardened securityContext on build init container
     set:

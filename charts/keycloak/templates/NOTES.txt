@@ -47,7 +47,7 @@ Admin Credentials:
 
   IMPORTANT: The admin user is only created on the first startup of a
   fresh Keycloak instance. If the database already contains users, the
-  KEYCLOAK_ADMIN / KEYCLOAK_ADMIN_PASSWORD environment variables are
+  KC_BOOTSTRAP_ADMIN_USERNAME / KC_BOOTSTRAP_ADMIN_PASSWORD variables are
   ignored. To reset credentials on an existing instance, use the
   Keycloak CLI (kcadm.sh) or the Admin REST API.
 {{- else }}

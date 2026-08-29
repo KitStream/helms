@@ -441,9 +441,58 @@ tests:
       - failedTemplate:
           errorPattern: "server.ingressGrpc.tls is empty"
 
-  - it: should accept ingressGrpc when TLS is configured
+  - it: should accept ingressGrpc when TLS and nginx annotations are configured
     set:
       server.ingressGrpc.enabled: true
+      server.ingressGrpc.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /signalexchange.SignalExchange
+      server.ingressGrpc.tls:
+        - secretName: netbird-tls
+          hosts:
+            - netbird.example.com
+      server.ingressGrpc.annotations:
+        nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: should fail when className is nginx and backend-protocol annotation is missing
+    set:
+      server.ingressGrpc.enabled: true
+      server.ingressGrpc.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /signalexchange.SignalExchange
+      server.ingressGrpc.tls:
+        - secretName: netbird-tls
+          hosts:
+            - netbird.example.com
+    asserts:
+      - failedTemplate:
+          errorPattern: "backend-protocol"
+
+  - it: should fail with a clear message when nginx annotations are explicitly null
+    set:
+      server.ingressGrpc.enabled: true
+      server.ingressGrpc.annotations: null
+      server.ingressGrpc.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /signalexchange.SignalExchange
+      server.ingressGrpc.tls:
+        - secretName: netbird-tls
+          hosts:
+            - netbird.example.com
+    asserts:
+      - failedTemplate:
+          errorPattern: "backend-protocol"
+
+  - it: should accept a non-nginx ingressGrpc controller without annotations
+    set:
+      server.ingressGrpc.enabled: true
+      server.ingressGrpc.className: haproxy
       server.ingressGrpc.hosts:
         - host: netbird.example.com
           paths:

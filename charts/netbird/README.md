@@ -163,14 +163,20 @@ server:
         hosts:
           - netbird.example.com
   # ⚠ ingressGrpc requires TLS. Standard nginx-ingress cannot negotiate
-  # HTTP/2 cleartext (h2c), and the chart sets
-  # nginx.ingress.kubernetes.io/ssl-redirect: "true" by default, so
-  # plaintext gRPC is redirected to HTTPS and fails without a cert.
+  # HTTP/2 cleartext (h2c), so plaintext gRPC fails without a cert.
   # Enabling this block with an empty `tls:` is rejected at template time.
+  # ⚠ Annotations are NOT set by default — they are controller-specific and
+  # `className` is configurable. ingress-nginx needs the ones below; the
+  # chart fails fast if className is nginx and backend-protocol is missing.
   # For plaintext h2c, use server.grpcRoute (Gateway API) instead — see the
   # "Gateway API as an alternative to Ingress" section below.
   ingressGrpc:
     enabled: true
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     hosts:
       - host: netbird.example.com
         paths:
@@ -796,23 +802,23 @@ instead — this disables the embedded relay and uses
 
 #### Server Ingress
 
-| Key                               | Type   | Default         | Description                                                                                                 |
-| --------------------------------- | ------ | --------------- | ----------------------------------------------------------------------------------------------------------- |
-| `server.ingress.enabled`          | bool   | `false`         | Create HTTP ingress (API + OAuth2). Mutually exclusive with `server.httpRoute`.                             |
-| `server.ingress.className`        | string | `"nginx"`       | Ingress class                                                                                               |
-| `server.ingress.annotations`      | object | `{}`            | Ingress annotations                                                                                         |
-| `server.ingress.hosts`            | list   | `[]`            | Ingress host rules                                                                                          |
-| `server.ingress.tls`              | list   | `[]`            | TLS configuration                                                                                           |
-| `server.ingressGrpc.enabled`      | bool   | `false`         | Create gRPC ingress (Signal + Management). Mutually exclusive with `server.grpcRoute`.                      |
-| `server.ingressGrpc.className`    | string | `"nginx"`       | Ingress class                                                                                               |
-| `server.ingressGrpc.annotations`  | object | see values.yaml | GRPC backend annotations                                                                                    |
-| `server.ingressGrpc.hosts`        | list   | `[]`            | Ingress host rules                                                                                          |
-| `server.ingressGrpc.tls`          | list   | `[]`            | TLS configuration                                                                                           |
-| `server.ingressRelay.enabled`     | bool   | `false`         | Create relay/WebSocket ingress. Mutually exclusive with `server.relayHttpRoute` and `server.relayTcpRoute`. |
-| `server.ingressRelay.className`   | string | `"nginx"`       | Ingress class                                                                                               |
-| `server.ingressRelay.annotations` | object | `{}`            | Ingress annotations                                                                                         |
-| `server.ingressRelay.hosts`       | list   | `[]`            | Ingress host rules                                                                                          |
-| `server.ingressRelay.tls`         | list   | `[]`            | TLS configuration                                                                                           |
+| Key                               | Type   | Default   | Description                                                                                                                     |
+| --------------------------------- | ------ | --------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `server.ingress.enabled`          | bool   | `false`   | Create HTTP ingress (API + OAuth2). Mutually exclusive with `server.httpRoute`.                                                 |
+| `server.ingress.className`        | string | `"nginx"` | Ingress class                                                                                                                   |
+| `server.ingress.annotations`      | object | `{}`      | Ingress annotations                                                                                                             |
+| `server.ingress.hosts`            | list   | `[]`      | Ingress host rules                                                                                                              |
+| `server.ingress.tls`              | list   | `[]`      | TLS configuration                                                                                                               |
+| `server.ingressGrpc.enabled`      | bool   | `false`   | Create gRPC ingress (Signal + Management). Mutually exclusive with `server.grpcRoute`.                                          |
+| `server.ingressGrpc.className`    | string | `"nginx"` | Ingress class                                                                                                                   |
+| `server.ingressGrpc.annotations`  | object | `{}`      | Controller-specific annotations. Empty by default; ingress-nginx requires `backend-protocol: GRPC` (enforced at template time). |
+| `server.ingressGrpc.hosts`        | list   | `[]`      | Ingress host rules                                                                                                              |
+| `server.ingressGrpc.tls`          | list   | `[]`      | TLS configuration                                                                                                               |
+| `server.ingressRelay.enabled`     | bool   | `false`   | Create relay/WebSocket ingress. Mutually exclusive with `server.relayHttpRoute` and `server.relayTcpRoute`.                     |
+| `server.ingressRelay.className`   | string | `"nginx"` | Ingress class                                                                                                                   |
+| `server.ingressRelay.annotations` | object | `{}`      | Ingress annotations                                                                                                             |
+| `server.ingressRelay.hosts`       | list   | `[]`      | Ingress host rules                                                                                                              |
+| `server.ingressRelay.tls`         | list   | `[]`      | TLS configuration                                                                                                               |
 
 #### Server Gateway API routes
 
@@ -875,7 +881,7 @@ terminated at the referenced Gateway's listeners, not in these values.
 | ---------------------------- | ------ | ----------------------- | ---------------------------- |
 | `dashboard.replicaCount`     | int    | `1`                     | Number of dashboard replicas |
 | `dashboard.image.repository` | string | `"netbirdio/dashboard"` | Dashboard image              |
-| `dashboard.image.tag`        | string | `"v2.39.0"`             | Dashboard image tag          |
+| `dashboard.image.tag`        | string | `"v2.91.0"`             | Dashboard image tag          |
 | `dashboard.image.pullPolicy` | string | `"IfNotPresent"`        | Image pull policy            |
 | `dashboard.imagePullSecrets` | list   | `[]`                    | Component-level pull secrets |
 

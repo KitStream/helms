@@ -85,9 +85,9 @@ spec:
 {{- if or $hasAdmin $hasExternalDB .Values.extraEnvVars }}
           env:
   {{- if $hasAdmin }}
-            - name: KEYCLOAK_ADMIN
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
               value: {{ .Values.admin.username | quote }}
-            - name: KEYCLOAK_ADMIN_PASSWORD
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.admin.password.secretName }}

@@ -233,11 +233,11 @@ This runs `kc.sh build` in an init container and passes `--optimized` to the mai
 
 ### Admin Credentials
 
-| Key                         | Type   | Default      | Description                               |
-| --------------------------- | ------ | ------------ | ----------------------------------------- |
-| `admin.username`            | string | `""`         | Admin username (maps to `KEYCLOAK_ADMIN`) |
-| `admin.password.secretName` | string | `""`         | Secret containing the admin password      |
-| `admin.password.secretKey`  | string | `"password"` | Key in the Secret                         |
+| Key                         | Type   | Default      | Description                                            |
+| --------------------------- | ------ | ------------ | ------------------------------------------------------ |
+| `admin.username`            | string | `""`         | Admin username (maps to `KC_BOOTSTRAP_ADMIN_USERNAME`) |
+| `admin.password.secretName` | string | `""`         | Secret containing the admin password                   |
+| `admin.password.secretKey`  | string | `"password"` | Key in the Secret                                      |
 
 ### Observability
 
