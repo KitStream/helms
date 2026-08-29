@@ -114,52 +114,52 @@ KC_HEALTH_ENABLED: {{ .Values.healthEnabled | quote }}
 KC_METRICS_ENABLED: {{ .Values.metrics.enabled | quote }}
 KC_LOG_LEVEL: {{ .Values.logLevel | quote }}
 KC_HTTP_ENABLED: {{ .Values.httpEnabled | quote }}
-{{- if .Values.hostname }}
+  {{- if .Values.hostname }}
 KC_HOSTNAME: {{ .Values.hostname | quote }}
-{{- end }}
+  {{- end }}
 KC_HOSTNAME_STRICT: {{ .Values.hostnameStrict | quote }}
-{{- if .Values.hostnameAdmin }}
+  {{- if .Values.hostnameAdmin }}
 KC_HOSTNAME_ADMIN: {{ .Values.hostnameAdmin | quote }}
-{{- end }}
-{{- if .Values.proxyHeaders }}
+  {{- end }}
+  {{- if .Values.proxyHeaders }}
 KC_PROXY_HEADERS: {{ .Values.proxyHeaders | quote }}
-{{- end }}
-{{- if .Values.features }}
+  {{- end }}
+  {{- if .Values.features }}
 KC_FEATURES: {{ .Values.features | quote }}
-{{- end }}
-{{- if .Values.tls.enabled }}
+  {{- end }}
+  {{- if .Values.tls.enabled }}
 KC_HTTPS_CERTIFICATE_FILE: "/opt/keycloak/conf/tls/tls.crt"
 KC_HTTPS_CERTIFICATE_KEY_FILE: "/opt/keycloak/conf/tls/tls.key"
-{{- end }}
-{{- if eq (include "keycloak.database.isExternal" .) "true" }}
+  {{- end }}
+  {{- if eq (include "keycloak.database.isExternal" .) "true" }}
 KC_DB: {{ include "keycloak.database.vendor" . | quote }}
 KC_DB_URL_HOST: {{ .Values.database.host | quote }}
 KC_DB_URL_PORT: {{ include "keycloak.database.port" . | quote }}
 KC_DB_URL_DATABASE: {{ .Values.database.name | quote }}
 KC_DB_USERNAME: {{ .Values.database.user | quote }}
-  {{- if .Values.database.poolMinSize }}
+    {{- if .Values.database.poolMinSize }}
 KC_DB_POOL_MIN_SIZE: {{ .Values.database.poolMinSize | quote }}
-  {{- end }}
-  {{- if .Values.database.poolInitialSize }}
+    {{- end }}
+    {{- if .Values.database.poolInitialSize }}
 KC_DB_POOL_INITIAL_SIZE: {{ .Values.database.poolInitialSize | quote }}
-  {{- end }}
-  {{- if .Values.database.poolMaxSize }}
+    {{- end }}
+    {{- if .Values.database.poolMaxSize }}
 KC_DB_POOL_MAX_SIZE: {{ .Values.database.poolMaxSize | quote }}
-  {{- end }}
-  {{- if .Values.database.sslMode }}
-    {{- if eq .Values.database.type "postgresql" }}
+    {{- end }}
+    {{- if .Values.database.sslMode }}
+      {{- if eq .Values.database.type "postgresql" }}
 KC_DB_URL_PROPERTIES: {{ printf "?sslmode=%s" .Values.database.sslMode | quote }}
+      {{- end }}
     {{- end }}
   {{- end }}
-{{- end }}
-{{- if eq .Values.database.type "dev" }}
+  {{- if eq .Values.database.type "dev" }}
 KC_CACHE: "local"
-{{- else }}
+  {{- else }}
 KC_CACHE: "ispn"
 KC_CACHE_STACK: {{ .Values.cache.stack | quote }}
-{{- if eq .Values.cache.stack "kubernetes" }}
+    {{- if eq .Values.cache.stack "kubernetes" }}
 KC_CACHE_CONFIG_FILE: "cache-ispn.xml"
 JAVA_OPTS_APPEND: {{ printf "-Djgroups.dns.query=%s" (include "keycloak.headlessServiceFQDN" .) | quote }}
-{{- end }}
-{{- end }}
+    {{- end }}
+  {{- end }}
 {{- end }}

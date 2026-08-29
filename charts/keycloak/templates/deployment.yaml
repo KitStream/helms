@@ -43,13 +43,13 @@ spec:
             - configMapRef:
                 name: {{ include "keycloak.fullname" . }}-env
           env:
-{{- if eq (include "keycloak.database.isExternal" .) "true" }}
+  {{- if eq (include "keycloak.database.isExternal" .) "true" }}
             - name: KC_DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.database.password.secretName }}
                   key: {{ .Values.database.password.secretKey }}
-{{- end }}
+  {{- end }}
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000

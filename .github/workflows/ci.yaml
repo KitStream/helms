@@ -59,7 +59,9 @@ jobs:
           cache: false
 
       - name: Install helmfmt
-        run: go install github.com/digitalstudium/helmfmt@latest
+        # Pinned: @latest is not reproducible and v0.6.1 fails to build
+        # (undefined: sprigStubNames), which broke this job for every PR.
+        run: go install github.com/digitalstudium/helmfmt@v0.6.0
 
       - name: Check Helm template formatting
         run: |

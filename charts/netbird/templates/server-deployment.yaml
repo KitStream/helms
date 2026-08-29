@@ -41,7 +41,7 @@ spec:
 {{- $relayConfigured := gt (len .Values.server.config.relays.addresses) 0 }}
 {{- $relaySecretName := "" }}
 {{- if $relayConfigured }}
-{{- $relaySecretName = include "netbird.server.resolveSecretName" (dict "ref" .Values.server.secrets.relaySecret "generated" $generated) }}
+  {{- $relaySecretName = include "netbird.server.resolveSecretName" (dict "ref" .Values.server.secrets.relaySecret "generated" $generated) }}
 {{- end }}
 {{- $isExternal := eq (include "netbird.database.isExternal" .) "true" }}
 {{- $patSidecar := and .Values.pat.enabled (not $isExternal) }}
@@ -123,16 +123,16 @@ spec:
               value: ""
 {{- end }}
 {{- if $relayConfigured }}
-{{- if $relaySecretName }}
+  {{- if $relaySecretName }}
             - name: RELAY_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ $relaySecretName }}
                   key: {{ .Values.server.secrets.relaySecret.secretKey }}
-{{- else }}
+  {{- else }}
             - name: RELAY_SECRET
               value: ""
-{{- end }}
+  {{- end }}
 {{- end }}
 {{- if $isExternal }}
             - name: DB_PASSWORD
