@@ -2,7 +2,7 @@ apiVersion: v2
 name: netbird
 description: A Helm chart for deploying NetBird VPN management, signal, dashboard, and relay services on Kubernetes
 type: application
-version: 0.6.0
+version: 0.7.0
 appVersion: "0.77.1"
 keywords:
   - netbird
@@ -30,9 +30,9 @@ annotations:
     - name: Initium
       url: https://github.com/KitStream/initium
   artifacthub.io/changes: |
-    - kind: added
-      description: Dedicated gRPC and relay Services with appProtocol (h2c/ws) so Envoy-based Gateway API controllers (Cilium, Envoy Gateway) configure the correct upstream protocol
     - kind: changed
-      description: Bump NetBird from 0.72.3 to 0.73.2
+      description: "BREAKING: server.ingressGrpc.annotations is now empty by default instead of carrying nginx-specific annotations, which were applied even when className pointed at another controller. ingress-nginx users must set them explicitly; the chart fails at template time if className is nginx and backend-protocol is missing. See the CHANGELOG for migration steps."
     - kind: changed
-      description: Document Cilium Gateway API setup and management.ProxyService in values.yaml
+      description: Bump NetBird from 0.73.2 to 0.77.1
+    - kind: changed
+      description: Bump dashboard image from v2.39.0 to v2.91.0 to pair with server 0.77.x
