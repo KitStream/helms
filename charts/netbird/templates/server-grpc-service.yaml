@@ -17,9 +17,9 @@ spec:
       port: {{ .Values.server.grpcService.port }}
       targetPort: http
       protocol: TCP
-      {{- with .Values.server.grpcService.appProtocol }}
+  {{- with .Values.server.grpcService.appProtocol }}
       appProtocol: {{ . }}
-      {{- end }}
+  {{- end }}
   selector:
     {{- include "netbird.server.selectorLabels" . | nindent 4 }}
 {{- end }}

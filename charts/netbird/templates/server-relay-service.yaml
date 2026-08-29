@@ -17,9 +17,9 @@ spec:
       port: {{ .Values.server.relayService.port }}
       targetPort: http
       protocol: TCP
-      {{- with .Values.server.relayService.appProtocol }}
+  {{- with .Values.server.relayService.appProtocol }}
       appProtocol: {{ . }}
-      {{- end }}
+  {{- end }}
   selector:
     {{- include "netbird.server.selectorLabels" . | nindent 4 }}
 {{- end }}

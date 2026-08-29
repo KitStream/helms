@@ -109,7 +109,7 @@ features: ""
 
 # ── Admin Credentials ────────────────────────────────────────────────────
 admin:
-  # -- Admin username (maps to KEYCLOAK_ADMIN). Leave empty to skip initial admin creation
+  # -- Admin username (maps to KC_BOOTSTRAP_ADMIN_USERNAME). Leave empty to skip initial admin creation
   username: ""
   # -- Admin password via Kubernetes Secret reference
   password:

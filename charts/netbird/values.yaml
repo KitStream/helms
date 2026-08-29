@@ -495,11 +495,23 @@ server:
   ingressGrpc:
     enabled: false
     className: "nginx"
-    annotations:
-      nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
-      nginx.ingress.kubernetes.io/ssl-redirect: "true"
-      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
-      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    # -- Annotations are controller-agnostic (empty by default) because
+    # className is configurable — nginx-specific keys would be meaningless on
+    # HAProxy, Traefik, or any other controller. Supply the annotations your
+    # controller needs to carry gRPC (HTTP/2) to the backend.
+    #
+    # For ingress-nginx, these are required — without backend-protocol: GRPC
+    # the controller proxies gRPC as HTTP/1.1 and requests fail:
+    #
+    #   annotations:
+    #     nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+    #     nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    #     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    #     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    #
+    # The chart fails fast when className is nginx and backend-protocol is
+    # missing, so this cannot silently break a gRPC ingress.
+    annotations: {}
     hosts: []
     tls: []
 
@@ -651,7 +663,7 @@ dashboard:
 
   image:
     repository: netbirdio/dashboard
-    tag: "v2.39.0"
+    tag: "v2.91.0"
     pullPolicy: IfNotPresent
 
   imagePullSecrets: []

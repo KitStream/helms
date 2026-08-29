@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Changed
+
+- **netbird**: `server.ingressGrpc.annotations` is now empty by default
+  instead of carrying four `nginx.ingress.kubernetes.io/*` annotations.
+  `server.ingressGrpc.className` is configurable, so nginx-specific keys
+  were applied to Ingresses managed by HAProxy, Traefik, and other
+  controllers where they are meaningless. The nginx annotations remain in
+  `values.yaml` as a commented example. Fixes #134.
+
+  **Migration** — if you use ingress-nginx and relied on the defaults, add
+  them explicitly:
+
+  ```yaml
+  server:
+    ingressGrpc:
+      annotations:
+        nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+        nginx.ingress.kubernetes.io/ssl-redirect: "true"
+        nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+        nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  ```
+
+  You will not silently lose gRPC: the chart now **fails at template time**
+  when `ingressGrpc.className` contains `nginx` and the annotations omit
+  `nginx.ingress.kubernetes.io/backend-protocol`, since ingress-nginx
+  proxies the backend as HTTP/1.1 without it. Non-nginx controllers are
+  unaffected and need no annotations.
+- **netbird**: Bump appVersion from 0.73.2 to 0.77.1, covering upstream
+  0.74.x–0.77.x. Notable additions: Agent Network (a per-account LLM
+  gateway built on the existing reverse proxy, self-hosted only), a
+  rewritten desktop client, relay `X-Real-Ip` handling restricted to
+  configured trusted proxies, and privileged-caller checks for local SSH
+  daemon settings. No config keys, env vars, ports, or protocols used by
+  this chart changed, and no manual database migration is required.
+  See [v0.77.1 release notes](https://github.com/netbirdio/netbird/releases/tag/v0.77.1)
+  (#116–#132, #135).
+- **netbird**: Bump dashboard image from v2.39.0 to v2.91.0 to stay paired
+  with server 0.77.x. The dashboard's environment contract is unchanged —
+  every variable the chart sets is still rendered by upstream's own
+  `dashboard.env` — so no values changes are required.
+
 ## [0.6.0] — 2026-06-23
 
 ### Added

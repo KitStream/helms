@@ -21,13 +21,29 @@ tests:
       - isKind:
           of: Ingress
 
-  - it: should include default gRPC annotations
+  - it: should not set controller-specific annotations by default
     set:
       server.ingressGrpc.enabled: true
       server.ingressGrpc.hosts:
         - host: netbird.example.com
           paths:
             - path: /signalexchange.SignalExchange
+    asserts:
+      - notExists:
+          path: metadata.annotations
+
+  - it: should render user-supplied nginx annotations verbatim
+    set:
+      server.ingressGrpc.enabled: true
+      server.ingressGrpc.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /signalexchange.SignalExchange
+      server.ingressGrpc.annotations:
+        nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+        nginx.ingress.kubernetes.io/ssl-redirect: "true"
+        nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+        nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     asserts:
       - isSubset:
           path: metadata.annotations
@@ -36,6 +52,24 @@ tests:
             nginx.ingress.kubernetes.io/ssl-redirect: "true"
             nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
             nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+
+  - it: should render annotations for a non-nginx controller
+    set:
+      server.ingressGrpc.enabled: true
+      server.ingressGrpc.className: haproxy
+      server.ingressGrpc.hosts:
+        - host: netbird.example.com
+          paths:
+            - path: /signalexchange.SignalExchange
+      server.ingressGrpc.annotations:
+        haproxy.org/server-proto: "h2"
+    asserts:
+      - equal:
+          path: metadata.annotations["haproxy.org/server-proto"]
+          value: "h2"
+      - equal:
+          path: spec.ingressClassName
+          value: haproxy
 
   - it: should have -grpc suffix in name
     set:

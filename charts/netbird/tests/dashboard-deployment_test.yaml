@@ -13,7 +13,7 @@ tests:
     asserts:
       - equal:
           path: spec.template.spec.containers[0].image
-          value: "netbirdio/dashboard:v2.39.0"
+          value: "netbirdio/dashboard:v2.91.0"
 
   - it: should set replica count
     set:
