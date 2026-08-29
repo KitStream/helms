@@ -4,6 +4,8 @@ All notable changes to the Keycloak Helm chart will be documented in this file.
 
 ## Unreleased
 
+## [26.7.2] — 2026-08-29
+
 ### Changed
 
 - Use `KC_BOOTSTRAP_ADMIN_USERNAME` / `KC_BOOTSTRAP_ADMIN_PASSWORD` for the
