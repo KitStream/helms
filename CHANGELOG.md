@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Changed
+
+- **netbird**: Bump appVersion from 0.77.1 to 0.78.2. Upstream 0.78.x is
+  almost entirely client-side (rewritten Windows tray, remote debug
+  bundles now opt-in per peer); the one server-side item for combined
+  deployments is a 0.78.1 fix serving networks with peer-based routers
+  from the SQLite network map. The combined-server config template and
+  dashboard env contract are byte-identical to 0.77.1 upstream — no
+  config keys, env vars, ports, or protocols used by this chart changed,
+  and no manual database migration is required.
+  See [v0.78.2 release notes](https://github.com/netbirdio/netbird/releases/tag/v0.78.2) (#139).
+- **netbird**: Bump dashboard image from v2.91.0 to v2.92.0, the
+  dashboard release paired with the server 0.78.x cycle (#139).
+
+### Fixed
+
+- **CI**: The daily upstream version checker silently stopped on
+  2026-08-23 — GitHub disables cron-scheduled workflows after 60 days
+  without repository activity and never re-enables them, so no update
+  issues were filed for almost a month. The workflow is re-enabled, and
+  the CI pipeline now re-enables it on every push to main (idempotent,
+  `actions: write` scoped to that job), so the schedule revives itself
+  as soon as development resumes after a dormant period.
+
 ## [0.7.0] — 2026-08-29
 
 ### Changed

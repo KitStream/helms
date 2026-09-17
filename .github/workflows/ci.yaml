@@ -458,3 +458,20 @@ jobs:
           kubectl -n keycloak-e2e logs deployment/postgres --tail=50 || true
           echo "=== Events ==="
           kubectl -n keycloak-e2e get events --sort-by='.lastTimestamp' || true
+
+  # ── Keep scheduled workflows alive ──────────────────────────────────
+  # GitHub disables cron-scheduled workflows after 60 days without repo
+  # activity and never re-enables them (this silenced the upstream version
+  # checker between 2026-08-23 and 2026-09-17). Re-enabling is idempotent,
+  # so any push to main revives the schedule as soon as development resumes.
+  reenable-scheduled-workflows:
+    name: Re-enable Scheduled Workflows
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Re-enable upstream-check schedule
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow enable upstream-check.yaml --repo "$GITHUB_REPOSITORY"
