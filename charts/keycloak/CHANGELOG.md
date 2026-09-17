@@ -4,6 +4,22 @@ All notable changes to the Keycloak Helm chart will be documented in this file.
 
 ## Unreleased
 
+### Security
+
+- Bump Keycloak appVersion from 26.7.2 to 26.7.4 (#140)
+  - 26.7.3 fixes 20 CVEs, notably CVE-2026-16089 (auth-code
+    retargeting), CVE-2026-16093 (signed-JWT policy bypass), and
+    CVE-2026-19729 (path traversal, completing an earlier fix), plus
+    admin-API performance regressions
+  - 26.7.4 fixes 6 more CVEs, notably CVE-2026-17526
+    (impersonation-role privilege escalation to realm admin) and
+    CVE-2026-79651 (unauthenticated DoS via locale caching)
+  - Pure patch releases: no `KC_*` options, ports, health endpoints, or
+    container entrypoint changes
+  - See upstream release notes for
+    [26.7.3](https://github.com/keycloak/keycloak/releases/tag/26.7.3) and
+    [26.7.4](https://github.com/keycloak/keycloak/releases/tag/26.7.4)
+
 ## [26.7.2] — 2026-08-29
 
 ### Changed
