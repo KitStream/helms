@@ -4,6 +4,8 @@ All notable changes to the Keycloak Helm chart will be documented in this file.
 
 ## Unreleased
 
+## [26.7.4] — 2026-09-17
+
 ### Security
 
 - Bump Keycloak appVersion from 26.7.2 to 26.7.4 (#140)

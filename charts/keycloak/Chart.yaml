@@ -2,7 +2,7 @@ apiVersion: v2
 name: keycloak
 description: A Helm chart for deploying Keycloak IAM using the upstream quay.io/keycloak/keycloak image on Kubernetes
 type: application
-version: 26.7.2
+version: 26.7.4
 appVersion: "26.7.4"
 keywords:
   - keycloak
@@ -31,6 +31,4 @@ annotations:
       url: https://github.com/KitStream/helms
   artifacthub.io/changes: |
     - kind: security
-      description: Bump Keycloak from 26.6.3 to 26.7.2 — fixes CVE-2026-59888/59889 (jackson-databind) and CVE-2026-9796 (admin role rename TOCTOU allowing realm-wide privilege escalation)
-    - kind: changed
-      description: Use KC_BOOTSTRAP_ADMIN_USERNAME/KC_BOOTSTRAP_ADMIN_PASSWORD for the initial admin instead of the deprecated KEYCLOAK_ADMIN variables. No values change required.
+      description: Bump Keycloak from 26.7.2 to 26.7.4 — 26 upstream CVE fixes including CVE-2026-17526 (impersonation-role privilege escalation to realm admin), CVE-2026-16089 (auth-code retargeting), CVE-2026-16093 (signed-JWT policy bypass), and CVE-2026-79651 (unauthenticated DoS)
