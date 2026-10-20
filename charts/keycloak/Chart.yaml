@@ -2,7 +2,7 @@ apiVersion: v2
 name: keycloak
 description: A Helm chart for deploying Keycloak IAM using the upstream quay.io/keycloak/keycloak image on Kubernetes
 type: application
-version: 26.7.4
+version: 26.8.1
 appVersion: "26.8.1"
 keywords:
   - keycloak
@@ -31,4 +31,6 @@ annotations:
       url: https://github.com/KitStream/helms
   artifacthub.io/changes: |
     - kind: security
-      description: Bump Keycloak from 26.7.2 to 26.7.4 — 26 upstream CVE fixes including CVE-2026-17526 (impersonation-role privilege escalation to realm admin), CVE-2026-16089 (auth-code retargeting), CVE-2026-16093 (signed-JWT policy bypass), and CVE-2026-79651 (unauthenticated DoS)
+      description: Bump Keycloak from 26.7.4 to 26.8.1 — ~20 upstream CVE fixes including CVE-2026-94000 (manage-users to realm-admin escalation), CVE-2026-94218 (2FA bypass), CVE-2026-96446 (PAR single-use bypass), and CVE-2026-97846 (token-exchange mTLS binding bypass)
+    - kind: changed
+      description: Keycloak 26.8 persists login failures in the database; the first start against an existing database runs a schema migration and background index creation
