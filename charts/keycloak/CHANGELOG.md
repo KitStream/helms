@@ -4,6 +4,30 @@ All notable changes to the Keycloak Helm chart will be documented in this file.
 
 ## Unreleased
 
+### Security
+
+- Bump Keycloak appVersion from 26.7.4 to 26.8.1 (#145, #147)
+  - 26.8.1 fixes ~20 CVEs, notably CVE-2026-94000 (`manage-users` to
+    realm-admin privilege escalation), CVE-2026-94218 (2FA bypass),
+    CVE-2026-96446 (PAR single-use bypass), CVE-2026-97846
+    (token-exchange mTLS binding bypass), and a SAML broker signature
+    bypass
+
+### Changed
+
+- Upstream 26.8.0 notes relevant to this chart:
+  - Login failures are now persisted in the database by default (the old
+    in-memory behavior is the deprecated `login-failures:v1` feature).
+    The first startup after the upgrade runs a schema migration and
+    creates indexes on large tables in a non-blocking background job —
+    expect some extra load on first boot against an existing database.
+  - None of the `KC_*` options this chart sets were removed or renamed;
+    the `jdbc-ping` cache stack received an upstream bug fix. Ports,
+    health endpoints, and the container entrypoint are unchanged.
+  - See upstream release notes for
+    [26.8.0](https://github.com/keycloak/keycloak/releases/tag/26.8.0) and
+    [26.8.1](https://github.com/keycloak/keycloak/releases/tag/26.8.1)
+
 ## [26.7.4] — 2026-09-17
 
 ### Security
