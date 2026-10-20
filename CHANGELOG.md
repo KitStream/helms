@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Changed
+
+- **netbird**: Bump appVersion from 0.78.2 to 0.81.3, covering upstream
+  0.79.x–0.81.x. Notable additions: certificate posture checks (require
+  management and clients ≥ 0.81.0), nblink, path-based reverse-proxy
+  access control, and management reading `X-Real-IP` for peer connection
+  IPs behind reverse proxies. The combined-server config contract gained
+  one purely additive optional key (`reverseProxy.trustedPeers`); the
+  dashboard env contract is unchanged. No ports, protocols, or `NB_*`
+  env vars changed, and no manual database migration is required.
+  See [v0.81.3 release notes](https://github.com/netbirdio/netbird/releases/tag/v0.81.3)
+  (#144, #146, #148, #149).
+- **netbird**: Bump dashboard image from v2.92.0 to v2.95.0, the
+  dashboard release paired with the server 0.81.x cycle (certificate
+  posture and per-target access-control UI). Env contract unchanged.
+
+### Deprecated
+
+- **netbird**: Upstream deprecated the MySQL store in 0.81.0 and plans
+  to remove it (a `netbird-mysql-migrate` tool is provided). The chart's
+  `database.type: mysql` continues to work and remains tested, but new
+  deployments should prefer `postgresql` or `sqlite`; plan a migration
+  before upstream removes MySQL support.
+
 ## [0.7.1] — 2026-09-17
 
 ### Changed
