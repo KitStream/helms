@@ -8,11 +8,10 @@ database configuration introduced in the NetBird Helm chart.
 | File                                               | Description                          |
 | -------------------------------------------------- | ------------------------------------ |
 | [`postgresql-values.yaml`](postgresql-values.yaml) | Full example with PostgreSQL backend |
-| [`mysql-values.yaml`](mysql-values.yaml)           | Full example with MySQL backend      |
 
 ## How It Works
 
-When you set `database.type` to `postgresql` or `mysql`, the chart automatically
+When you set `database.type` to `postgresql`, the chart automatically
 adds two Initium init containers to the server pod:
 
 1. **`db-wait`** — Waits for the database to be reachable via TCP with

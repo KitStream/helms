@@ -17,7 +17,7 @@ This chart deploys the NetBird self-hosted stack as two components:
 
 The server uses a single `config.yaml` that is rendered from a ConfigMap template with sensitive values injected at pod startup from Kubernetes Secrets via [Initium](https://github.com/KitStream/initium)'s `render` subcommand (envsubst mode).
 
-For external databases (PostgreSQL, MySQL), the chart automatically:
+For an external database (PostgreSQL), the chart automatically:
 
 1. **Waits** for the database to be reachable (`initium wait-for`)
 2. **Creates** the database if it doesn't exist (`initium seed --spec`)
@@ -120,28 +120,21 @@ server:
         - "https://netbird.example.com/nb-silent-auth"
 ```
 
-### MySQL
+### Migrating from MySQL
 
-```yaml
-database:
-  type: mysql
-  host: mysql.database.svc.cluster.local
-  port: 3306
-  user: netbird
-  name: netbird
-  passwordSecret:
-    secretName: netbird-db-password
-    secretKey: password
+NetBird removed its MySQL store in **0.82.0** — a management server
+configured with the `mysql` engine refuses to start. Chart 0.8.0 and later
+therefore reject `database.type: mysql` at template time with this
+migration path, rather than deploying a server that crashloops:
 
-server:
-  config:
-    exposedAddress: "https://netbird.example.com:443"
-    auth:
-      issuer: "https://auth.example.com"
-      dashboardRedirectURIs:
-        - "https://netbird.example.com/nb-auth"
-        - "https://netbird.example.com/nb-silent-auth"
-```
+1. Stay on chart **0.7.x** (NetBird 0.81.x) while you migrate.
+2. Run the `netbird-mysql-migrate` tool from the
+   [v0.81.5 release](https://github.com/netbirdio/netbird/releases/tag/v0.81.5)
+   (it is not shipped in 0.82.0) — see
+   [Migrate from MySQL to PostgreSQL](https://docs.netbird.io/selfhosted/migration/mysql-to-postgresql).
+3. Switch your values to `database.type: postgresql` (example above),
+   `helm upgrade` on chart 0.7.x, and confirm the server is healthy.
+4. Upgrade to chart 0.8.0 or later.
 
 The chart automatically constructs the DSN and adds init containers to wait for the database and create it if needed.
 
@@ -477,7 +470,7 @@ The seeding mechanism depends on the database type:
   `restartPolicy: Always` and uses the `--sidecar` flag to stay alive after
   seeding. This is required because SQLite uses a local file and
   ReadWriteOnce PVCs cannot be mounted by multiple pods simultaneously.
-- **PostgreSQL / MySQL**: The seed runs as a post-install/post-upgrade Helm
+- **PostgreSQL**: The seed runs as a post-install/post-upgrade Helm
   hook Job that connects to the database over the network.
 
 In both cases, the seed:
@@ -658,16 +651,16 @@ ADFS) can be tested manually:
 
 ### Database
 
-| Key                                  | Type   | Default      | Description                                                   |
-| ------------------------------------ | ------ | ------------ | ------------------------------------------------------------- |
-| `database.type`                      | string | `"sqlite"`   | Database engine (`sqlite`, `postgresql`, `mysql`)             |
-| `database.host`                      | string | `""`         | Database hostname (required for postgresql/mysql)             |
-| `database.port`                      | string | `""`         | Database port (defaults: 5432 for postgresql, 3306 for mysql) |
-| `database.user`                      | string | `""`         | Database user (required for postgresql/mysql)                 |
-| `database.name`                      | string | `""`         | Database name (required for postgresql/mysql)                 |
-| `database.passwordSecret.secretName` | string | `""`         | Secret containing the database password                       |
-| `database.passwordSecret.secretKey`  | string | `"password"` | Key in the Secret                                             |
-| `database.sslMode`                   | string | `"disable"`  | SSL mode for PostgreSQL (ignored for mysql/sqlite)            |
+| Key                                  | Type   | Default      | Description                                  |
+| ------------------------------------ | ------ | ------------ | -------------------------------------------- |
+| `database.type`                      | string | `"sqlite"`   | Database engine (`sqlite`, `postgresql`)     |
+| `database.host`                      | string | `""`         | Database hostname (required for postgresql)  |
+| `database.port`                      | string | `""`         | Database port (default: 5432 for postgresql) |
+| `database.user`                      | string | `""`         | Database user (required for postgresql)      |
+| `database.name`                      | string | `""`         | Database name (required for postgresql)      |
+| `database.passwordSecret.secretName` | string | `""`         | Secret containing the database password      |
+| `database.passwordSecret.secretKey`  | string | `"password"` | Key in the Secret                            |
+| `database.sslMode`                   | string | `"disable"`  | SSL mode for PostgreSQL (ignored for sqlite) |
 
 ### OIDC / SSO
 
@@ -881,7 +874,7 @@ terminated at the referenced Gateway's listeners, not in these values.
 | ---------------------------- | ------ | ----------------------- | ---------------------------- |
 | `dashboard.replicaCount`     | int    | `1`                     | Number of dashboard replicas |
 | `dashboard.image.repository` | string | `"netbirdio/dashboard"` | Dashboard image              |
-| `dashboard.image.tag`        | string | `"v2.95.0"`             | Dashboard image tag          |
+| `dashboard.image.tag`        | string | `"v2.96.0"`             | Dashboard image tag          |
 | `dashboard.image.pullPolicy` | string | `"IfNotPresent"`        | Image pull policy            |
 | `dashboard.imagePullSecrets` | list   | `[]`                    | Component-level pull secrets |
 

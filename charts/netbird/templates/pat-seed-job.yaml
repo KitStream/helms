@@ -3,7 +3,7 @@ Post-install/post-upgrade Job — seeds account, user, and PAT into the
 database via Initium, then provisions the "All" group and default policy
 via the NetBird REST API.
 
-Only rendered for external databases (PostgreSQL/MySQL) where the seed
+Only rendered for external databases (PostgreSQL) where the seed
 connects over the network. For SQLite the seed runs as a sidecar container
 in the server Deployment to share the same PVC (ReadWriteOnce PVCs do not
 support multi-pod attach).

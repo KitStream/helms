@@ -188,7 +188,7 @@ netbird.server.resolveSecretName — resolves the effective secret name.
 
 {{/*
 netbird.database.engine — maps database.type to the NetBird store engine name.
-postgresql -> postgres, mysql -> mysql, sqlite -> sqlite
+postgresql -> postgres, sqlite -> sqlite
 */}}
 {{- define "netbird.database.engine" -}}
   {{- if eq .Values.database.type "postgresql" -}}postgres
@@ -198,14 +198,28 @@ postgresql -> postgres, mysql -> mysql, sqlite -> sqlite
 
 {{/*
 netbird.database.port — resolves the effective database port.
-Defaults to 5432 for postgresql, 3306 for mysql.
+Defaults to 5432 for postgresql.
 */}}
 {{- define "netbird.database.port" -}}
   {{- if .Values.database.port -}}
 {{- .Values.database.port -}}
   {{- else if eq .Values.database.type "postgresql" -}}5432
-  {{- else if eq .Values.database.type "mysql" -}}3306
   {{- else -}}0
+  {{- end -}}
+{{- end }}
+
+{{/*
+netbird.validate.databaseType — fail fast on unsupported database.type.
+NetBird removed the MySQL store in 0.82.0: a management server configured
+with the mysql engine refuses to start, so reject it at template time with
+the migration path instead of shipping a crashlooping Deployment.
+*/}}
+{{- define "netbird.validate.databaseType" -}}
+  {{- $type := toString .Values.database.type -}}
+  {{- if eq $type "mysql" -}}
+    {{- fail "database.type \"mysql\" is no longer supported: NetBird removed the MySQL store in 0.82.0 and the server refuses to start with it. Migrate to PostgreSQL first, while still on NetBird 0.81.x (chart 0.7.x): run the netbird-mysql-migrate tool from the v0.81.5 release (see https://docs.netbird.io/selfhosted/migration/mysql-to-postgresql), switch database.type to \"postgresql\", then upgrade the chart." -}}
+  {{- else if not (has $type (list "sqlite" "postgresql")) -}}
+    {{- fail (printf "database.type %q is not supported. Use \"sqlite\" or \"postgresql\"." $type) -}}
   {{- end -}}
 {{- end }}
 
@@ -239,14 +253,11 @@ zitadel  -> zitadelClientCredentials
 {{/*
 netbird.database.dsn — constructs the DSN string with ${DB_PASSWORD} placeholder.
 postgresql: host=H user=U password=${DB_PASSWORD} dbname=D port=P sslmode=S
-mysql:      U:${DB_PASSWORD}@tcp(H:P)/D
 sqlite:     (empty string)
 */}}
 {{- define "netbird.database.dsn" -}}
   {{- if eq .Values.database.type "postgresql" -}}
 host={{ .Values.database.host }} user={{ .Values.database.user }} password=${DB_PASSWORD} dbname={{ .Values.database.name }} port={{ include "netbird.database.port" . }} sslmode={{ .Values.database.sslMode }}
-  {{- else if eq .Values.database.type "mysql" -}}
-{{ .Values.database.user }}:${DB_PASSWORD}@tcp({{ .Values.database.host }}:{{ include "netbird.database.port" . }})/{{ .Values.database.name }}
   {{- end -}}
 {{- end }}
 

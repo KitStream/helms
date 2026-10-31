@@ -223,44 +223,6 @@ should render listen address from values:
           engine: "sqlite"
           dsn: ""
           encryptionKey: "${ENCRYPTION_KEY}"
-should render mysql engine with constructed DSN:
-  1: |
-    config.yaml.tpl: |
-      server:
-        listenAddress: ":80"
-        exposedAddress: ""
-        stunPorts:
-          - 3478
-        metricsPort: 9090
-        healthcheckAddress: ":9000"
-        logLevel: "info"
-        logFile: "console"
-
-        authSecret: "${AUTH_SECRET}"
-        dataDir: "/var/lib/netbird"
-
-        auth:
-          issuer: ""
-          signKeyRefreshEnabled: true
-          cliRedirectURIs:
-            - "http://localhost:53000/"
-
-        store:
-          engine: "mysql"
-          dsn: "netbird:${DB_PASSWORD}@tcp(mysql.example.com:3306)/netbird"
-          encryptionKey: "${ENCRYPTION_KEY}"
-    seed.yaml: |
-      database:
-        driver: mysql
-        host: mysql.example.com
-        port: 3306
-        user: netbird
-        password: "{{ env.DB_PASSWORD }}"
-        name: netbird
-      phases:
-        - name: create-database
-          database: netbird
-          create_if_missing: true
 should render postgres engine with constructed DSN:
   1: |
     config.yaml.tpl: |
