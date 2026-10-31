@@ -2,7 +2,7 @@ apiVersion: v2
 name: netbird
 description: A Helm chart for deploying NetBird VPN management, signal, dashboard, and relay services on Kubernetes
 type: application
-version: 0.7.2
+version: 0.8.0
 appVersion: "0.82.0"
 keywords:
   - netbird
@@ -30,9 +30,9 @@ annotations:
     - name: Initium
       url: https://github.com/KitStream/initium
   artifacthub.io/changes: |
+    - kind: removed
+      description: "BREAKING: MySQL support (database.type mysql). NetBird 0.82.0 removed its MySQL store and the server refuses to start with it, so the chart now fails at template time with the migration path. Migrate to PostgreSQL on chart 0.7.x (netbird-mysql-migrate from v0.81.5) before upgrading; see the CHANGELOG."
     - kind: changed
-      description: Bump NetBird from 0.78.2 to 0.81.3
+      description: Bump NetBird from 0.81.3 to 0.82.0
     - kind: changed
-      description: Bump dashboard image from v2.92.0 to v2.95.0 to pair with server 0.81.x
-    - kind: deprecated
-      description: Upstream NetBird deprecated the MySQL store in 0.81.0 (removal planned); database.type mysql still works, but new deployments should prefer postgresql or sqlite
+      description: Bump dashboard image from v2.95.0 to v2.96.0
