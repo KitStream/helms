@@ -8,7 +8,6 @@
 # Backends:
 #   sqlite   — default SQLite storage (no external DB)
 #   postgres — PostgreSQL deployed as a simple pod
-#   mysql    — MySQL deployed as a simple pod
 #
 set -euo pipefail
 
@@ -97,70 +96,6 @@ EOF
     --from-literal=password='test%40pass'
 }
 
-deploy_mysql() {
-  log "Deploying MySQL..."
-  # NOTE: MYSQL_DATABASE is intentionally omitted so the "netbird" database
-  # does NOT exist on startup.  Initium's create_if_missing must create it.
-  # Without MYSQL_DATABASE the image won't create MYSQL_USER either, so the
-  # chart connects as root (see e2e-values-mysql.yaml).
-  kubectl -n "$NAMESPACE" apply -f - <<'EOF'
-apiVersion: v1
-kind: Secret
-metadata:
-  name: mysql-credentials
-type: Opaque
-stringData:
-  MYSQL_ROOT_PASSWORD: rootpassword
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: mysql
-spec:
-  selector:
-    app: mysql
-  ports:
-    - port: 3306
-      targetPort: 3306
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: mysql
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: mysql
-  template:
-    metadata:
-      labels:
-        app: mysql
-    spec:
-      containers:
-        - name: mysql
-          image: mysql:8.0
-          envFrom:
-            - secretRef:
-                name: mysql-credentials
-          ports:
-            - containerPort: 3306
-          readinessProbe:
-            exec:
-              command: ["mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-prootpassword"]
-            initialDelaySeconds: 15
-            periodSeconds: 5
-            timeoutSeconds: 3
-EOF
-
-  log "Waiting for MySQL to be ready..."
-  kubectl -n "$NAMESPACE" rollout status deployment/mysql --timeout=180s
-
-  # Create the password secret for netbird
-  kubectl -n "$NAMESPACE" create secret generic netbird-db-password \
-    --from-literal=password='rootpassword'
-}
-
 # ── Generate PAT for testing ───────────────────────────────────────────
 # NetBird PAT format: nbp_ (4) + secret (30) + base62(CRC32(secret)) (6) = 40 chars
 generate_pat_secret() {
@@ -194,12 +129,8 @@ case "$BACKEND" in
     deploy_postgres
     VALUES_FILE="$CHART/ci/e2e-values-postgres.yaml"
     ;;
-  mysql)
-    deploy_mysql
-    VALUES_FILE="$CHART/ci/e2e-values-mysql.yaml"
-    ;;
   *)
-    fail "Unknown backend: $BACKEND (expected: sqlite, postgres, mysql)"
+    fail "Unknown backend: $BACKEND (expected: sqlite, postgres)"
     ;;
 esac
 

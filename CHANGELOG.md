@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Removed
+
+- **netbird**: MySQL support (`database.type: mysql`). NetBird removed its
+  MySQL store in 0.82.0 — a management server configured with the `mysql`
+  engine refuses to start — so the chart now **fails at template time**
+  for `database.type: mysql`, printing the migration path, instead of
+  deploying a crashlooping server. Unknown `database.type` values are
+  rejected the same way; only `sqlite` and `postgresql` are accepted.
+  The MySQL e2e scenario, CI job, `make e2e-mysql` target, and
+  `examples/seed/mysql-values.yaml` are removed (#155).
+
+  **Migration** — do this _before_ upgrading to this chart version:
+
+  1. Stay on chart 0.7.x (NetBird 0.81.x).
+  2. Run the `netbird-mysql-migrate` tool from the
+     [v0.81.5 release](https://github.com/netbirdio/netbird/releases/tag/v0.81.5)
+     — it is not shipped in 0.82.0. See
+     [Migrate from MySQL to PostgreSQL](https://docs.netbird.io/selfhosted/migration/mysql-to-postgresql).
+  3. Set `database.type: postgresql` (with `host`, `user`, `name`, and
+     `passwordSecret`), `helm upgrade` on chart 0.7.x, and confirm the
+     server is healthy.
+  4. Upgrade to this chart version.
+
+### Changed
+
+- **netbird**: Bump appVersion from 0.81.3 to 0.82.0. Besides the MySQL
+  removal above: reverse proxy access logs now go through their own store
+  connection — by default a separate `access_logs.db` in the data
+  directory on SQLite, or the main DSN via its own pool on PostgreSQL, so
+  nothing needs to change on upgrade (`server.accessLogStore` /
+  `NB_ACCESS_LOG_*` can point it elsewhere); latency-aware HA routing on
+  clients; Rosenpass deprecated client-side. 0.81.4 distrusts the
+  compromised eMudhra CA keys. The combined-server config template and
+  dashboard env contract are byte-identical to 0.81.3 upstream.
+  See [v0.82.0 release notes](https://github.com/netbirdio/netbird/releases/tag/v0.82.0)
+  (#153, #154, #155).
+- **netbird**: Bump dashboard image from v2.95.0 to v2.96.0, the current
+  dashboard release for the 0.82.x cycle. Env contract unchanged.
+
 ## [0.7.2] — 2026-10-20
 
 ### Changed

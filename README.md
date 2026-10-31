@@ -41,7 +41,7 @@ See each chart's README for detailed configuration.
 - **Hardened by default** — Non-root, read-only root filesystem, all capabilities dropped, no privilege escalation.
 - **Structured configuration** — No raw DSN strings. Provide `database.host`, `database.user`, etc. and the chart builds it for you.
 - **Automatic database readiness** — Init containers wait for your database and create it if it doesn't exist. No manual setup, no race conditions.
-- **Comprehensive testing** — Unit tests (helm-unittest) + E2E tests across SQLite, PostgreSQL, and MySQL backends on every PR.
+- **Comprehensive testing** — Unit tests (helm-unittest) + E2E tests across SQLite and PostgreSQL backends on every PR.
 
 ## Prerequisites
 

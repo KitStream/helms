@@ -13,7 +13,7 @@ tests:
     asserts:
       - equal:
           path: spec.template.spec.containers[0].image
-          value: "netbirdio/netbird-server:0.81.3"
+          value: "netbirdio/netbird-server:0.82.0"
 
   - it: should use custom image tag when set
     set:
@@ -269,27 +269,6 @@ tests:
           path: spec.template.spec.initContainers[2].name
           value: config-init
 
-  - it: should add db-wait and db-seed init containers for mysql
-    set:
-      database.type: mysql
-      database.host: mysql.example.com
-      database.user: netbird
-      database.name: netbird
-      database.passwordSecret.secretName: my-mysql-secret
-    asserts:
-      - lengthEqual:
-          path: spec.template.spec.initContainers
-          count: 3
-      - equal:
-          path: spec.template.spec.initContainers[0].name
-          value: db-wait
-      - equal:
-          path: spec.template.spec.initContainers[1].name
-          value: db-seed
-      - equal:
-          path: spec.template.spec.initContainers[2].name
-          value: config-init
-
   - it: should configure db-wait with correct target for postgresql
     set:
       database.type: postgresql
@@ -302,18 +281,6 @@ tests:
       - contains:
           path: spec.template.spec.initContainers[0].args
           content: "tcp://pg.example.com:5432"
-
-  - it: should configure db-wait with default port for mysql
-    set:
-      database.type: mysql
-      database.host: mysql.example.com
-      database.user: netbird
-      database.name: netbird
-      database.passwordSecret.secretName: my-mysql-secret
-    asserts:
-      - contains:
-          path: spec.template.spec.initContainers[0].args
-          content: "tcp://mysql.example.com:3306"
 
   - it: should inject DB_PASSWORD into db-seed for postgresql
     set:

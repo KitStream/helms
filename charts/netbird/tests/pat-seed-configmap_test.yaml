@@ -45,22 +45,6 @@ tests:
           path: metadata.annotations["helm.sh/hook-weight"]
           value: "0"
 
-  - it: should have helm hook annotations for mysql
-    set:
-      pat.enabled: true
-      pat.secret.secretName: my-pat-secret
-      database.type: mysql
-      database.host: mysql.example.com
-      database.user: netbird
-      database.name: netbird
-      database.passwordSecret.secretName: mysql-secret
-    asserts:
-      - equal:
-          path: metadata.annotations["helm.sh/hook"]
-          value: "post-install,post-upgrade"
-
-  # ── Seed spec content ──────────────────────────────────────────────
-
   - it: should contain pat-seed.yaml key
     set:
       pat.enabled: true
@@ -118,26 +102,6 @@ tests:
       - matchRegex:
           path: data["pat-seed.yaml"]
           pattern: "password:"
-
-  - it: should use mysql database URL when database.type is mysql
-    set:
-      pat.enabled: true
-      pat.secret.secretName: my-pat-secret
-      database.type: mysql
-      database.host: mysql.example.com
-      database.user: netbird
-      database.name: netbird
-      database.passwordSecret.secretName: mysql-secret
-    asserts:
-      - matchRegex:
-          path: data["pat-seed.yaml"]
-          pattern: "driver: mysql"
-      - matchRegex:
-          path: data["pat-seed.yaml"]
-          pattern: "host: mysql\\.example\\.com"
-      - matchRegex:
-          path: data["pat-seed.yaml"]
-          pattern: "user: netbird"
 
   - it: should wait for required tables
     set:

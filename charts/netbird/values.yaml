@@ -33,30 +33,32 @@ imagePullSecrets: []
 # internal DSN from these fields — you never need to build a DSN string.
 #
 # For sqlite, only `database.type` is needed (no host/port/user/password).
-# For postgresql and mysql, the chart:
+# For postgresql, the chart:
 #   1. Waits for the database to be reachable (Initium wait-for)
 #   2. Creates the database if it doesn't exist (Initium seed)
 #   3. Constructs the DSN and renders it into the server config
 # =============================================================================
 database:
-  # -- Database engine. Options: sqlite, postgresql, mysql.
+  # -- Database engine. Options: sqlite, postgresql.
+  # (MySQL was removed upstream in NetBird 0.82.0 and is rejected at
+  # template time — migrate to PostgreSQL first; see the CHANGELOG.)
   type: "sqlite"
 
-  # -- Database hostname. Required for postgresql and mysql.
+  # -- Database hostname. Required for postgresql.
   host: ""
 
-  # -- Database port. Defaults to 5432 for postgresql, 3306 for mysql.
+  # -- Database port. Defaults to 5432 for postgresql.
   # Ignored for sqlite.
   port: ""
 
-  # -- Database user. Required for postgresql and mysql.
+  # -- Database user. Required for postgresql.
   user: ""
 
-  # -- Database name. Required for postgresql and mysql.
+  # -- Database name. Required for postgresql.
   name: ""
 
   # -- Kubernetes Secret containing the database password.
-  # Required for postgresql and mysql. Ignored for sqlite.
+  # Required for postgresql. Ignored for sqlite.
   #
   # Example Secret:
   #   apiVersion: v1
@@ -73,7 +75,7 @@ database:
     secretKey: "password"
 
   # -- SSL mode for PostgreSQL connections (e.g. disable, require, verify-ca,
-  # verify-full). Ignored for mysql and sqlite.
+  # verify-full). Ignored for sqlite.
   sslMode: "disable"
 
 # =============================================================================
@@ -663,7 +665,7 @@ dashboard:
 
   image:
     repository: netbirdio/dashboard
-    tag: "v2.95.0"
+    tag: "v2.96.0"
     pullPolicy: IfNotPresent
 
   imagePullSecrets: []

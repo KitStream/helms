@@ -88,17 +88,6 @@ tests:
       - matchSnapshot:
           path: data
 
-  - it: should render mysql engine with constructed DSN
-    set:
-      database.type: mysql
-      database.host: mysql.example.com
-      database.user: netbird
-      database.name: netbird
-      database.passwordSecret.secretName: my-mysql-secret
-    asserts:
-      - matchSnapshot:
-          path: data
-
   - it: should include seed.yaml for postgresql
     set:
       database.type: postgresql
@@ -563,3 +552,48 @@ tests:
       - matchRegex:
           path: data["config.yaml.tpl"]
           pattern: '"rels://relay\$\{DOLLAR\}weird\.example\.com:443"'
+
+  # ── Database type validation (MySQL removed upstream in NetBird 0.82.0) ──
+
+  - it: should reject database.type mysql with the migration path
+    set:
+      database.type: mysql
+      database.host: mysql.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: my-mysql-secret
+    asserts:
+      - failedTemplate:
+          errorPattern: "database.type \"mysql\" is no longer supported.*netbird-mysql-migrate.*v0.81.5"
+
+  - it: should reject an unknown database.type
+    set:
+      database.type: mariadb
+    asserts:
+      - failedTemplate:
+          errorPattern: "database.type \"mariadb\" is not supported. Use \"sqlite\" or \"postgresql\""
+
+  - it: should reject an empty database.type
+    set:
+      database.type: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "database.type \"\" is not supported"
+
+  - it: should accept database.type sqlite
+    set:
+      database.type: sqlite
+    asserts:
+      - hasDocuments:
+          count: 1
+
+  - it: should accept database.type postgresql
+    set:
+      database.type: postgresql
+      database.host: pg.example.com
+      database.user: netbird
+      database.name: netbird
+      database.passwordSecret.secretName: pg-secret
+    asserts:
+      - hasDocuments:
+          count: 1

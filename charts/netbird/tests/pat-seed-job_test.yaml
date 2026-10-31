@@ -53,21 +53,6 @@ tests:
       - isKind:
           of: Job
 
-  - it: should render a Job for mysql
-    set:
-      pat.enabled: true
-      pat.secret.secretName: my-pat-secret
-      database.type: mysql
-      database.host: mysql.example.com
-      database.user: netbird
-      database.name: netbird
-      database.passwordSecret.secretName: mysql-secret
-    asserts:
-      - hasDocuments:
-          count: 1
-      - isKind:
-          of: Job
-
   - it: should have correct helm hook annotations
     set:
       pat.enabled: true
@@ -199,27 +184,6 @@ tests:
               secretKeyRef:
                 name: pg-secret
                 key: dbpass
-
-  - it: should inject DB_PASSWORD for mysql
-    set:
-      pat.enabled: true
-      pat.secret.secretName: my-pat-secret
-      database.type: mysql
-      database.host: mysql.example.com
-      database.user: netbird
-      database.name: netbird
-      database.passwordSecret.secretName: mysql-secret
-    asserts:
-      - contains:
-          path: spec.template.spec.initContainers[1].env
-          content:
-            name: DB_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: mysql-secret
-                key: password
-
-  # ── Main container: api-provision ──────────────────────────────────
 
   - it: should have api-provision container using alpine
     set:

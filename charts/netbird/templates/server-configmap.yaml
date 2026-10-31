@@ -1,5 +1,6 @@
 ﻿{{- include "netbird.validate.exposedAddress" . -}}
 {{- include "netbird.validate.routeExclusion" . -}}
+{{- include "netbird.validate.databaseType" . -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
